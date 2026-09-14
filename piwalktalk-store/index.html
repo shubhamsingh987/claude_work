@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PiWalkTalk — Open-Mesh Walkie-Talkies, No SIM, No Subscription</title>
+<meta name="description" content="PiWalkTalk is a pair of ESP32-based walkie-talkies that auto-discover each other and talk over an open radio mesh — no SIM, no internet, no subscription. ₹2999/pair. Order on WhatsApp.">
+<meta name="theme-color" content="#151210">
+
+<meta property="og:type" content="product">
+<meta property="og:title" content="PiWalkTalk — Open-Mesh Walkie-Talkies">
+<meta property="og:description" content="Auto-discovering, hold-to-talk radios built on ESP32 + ESP-NOW. No SIM, no internet, no subscription. ₹2999/pair.">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23151210'/%3E%3Cpath d='M32 14a10 10 0 0 1 10 10v6a10 10 0 0 1-20 0v-6a10 10 0 0 1 10-10Z' fill='none' stroke='%23f2a63e' stroke-width='4'/%3E%3Cpath d='M22 30v2a10 10 0 0 0 20 0v-2' fill='none' stroke='%23f2a63e' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M32 44v6' stroke='%23f2a63e' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M24 50h16' stroke='%23f2a63e' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header" id="top">
+  <div class="wrap header-row">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3a4 4 0 0 1 4 4v3a4 4 0 0 1-8 0V7a4 4 0 0 1 4-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11v1a4 4 0 0 0 8 0v-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 18v3M9 21h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </span>
+      PiWalkTalk
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#range">Range</a>
+      <a href="#specs">Specs</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-whatsapp btn-small" id="nav-cta" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.6.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.6-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5C10.1 9 9.6 7.8 9.4 7.3c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.1 3c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.2-.6-.4Z"/><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.2-.4-4.5-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></svg>
+      Order on WhatsApp
+    </a>
+    <button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="site-nav-mobile" aria-label="Open menu">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <nav class="site-nav-mobile" id="site-nav-mobile" aria-label="Primary mobile">
+    <a href="#how">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#range">Range</a>
+    <a href="#specs">Specs</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-row">
+      <div class="hero-copy">
+        <p class="eyebrow">DIY radio, built on ESP32</p>
+        <h1>Push the button.<br>Everyone hears you.</h1>
+        <p class="hero-sub">
+          PiWalkTalk is a pair of pocket radios that find each other the moment they power on,
+          and broadcast your voice live to every unit in range. No SIM card, no app, no pairing
+          screen, no monthly bill — just an open 2.4GHz mesh and a button.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-whatsapp" id="hero-cta" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.6.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.6-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5C10.1 9 9.6 7.8 9.4 7.3c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.1 3c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.2-.6-.4Z"/><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.2-.4-4.5-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></svg>
+            Order a pair — ₹2999
+          </a>
+          <a class="btn btn-ghost" href="#how">See how it works</a>
+        </div>
+        <ul class="hero-facts">
+          <li>No SIM card</li>
+          <li>No subscription</li>
+          <li>Works with zero internet</li>
+          <li>Up to ~100m, open air</li>
+        </ul>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 420 380" width="100%" height="100%">
+          <defs>
+            <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#f2a63e" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#f2a63e" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="210" cy="190" r="180" fill="url(#glow)"/>
+
+          <g class="pulse-ring">
+            <circle cx="210" cy="190" r="70" fill="none" stroke="#f2a63e" stroke-width="1.5" opacity="0.5"/>
+          </g>
+          <g class="pulse-ring pulse-ring-delay">
+            <circle cx="210" cy="190" r="70" fill="none" stroke="#f2a63e" stroke-width="1.5" opacity="0.5"/>
+          </g>
+
+          <!-- left radio -->
+          <g transform="translate(96,120)">
+            <rect x="0" y="0" width="64" height="132" rx="14" fill="#221c17" stroke="#3a2f26" stroke-width="2"/>
+            <rect x="8" y="14" width="48" height="60" rx="6" fill="#0f0d0b"/>
+            <rect x="12" y="20" width="24" height="4" rx="2" fill="#f2a63e"/>
+            <rect x="12" y="28" width="34" height="3" rx="1.5" fill="#5a4f43"/>
+            <rect x="12" y="35" width="30" height="3" rx="1.5" fill="#5a4f43"/>
+            <circle cx="32" cy="96" r="14" fill="#2c241d" stroke="#f2a63e" stroke-width="2"/>
+            <rect x="26" y="-18" width="12" height="22" rx="4" fill="#3a2f26"/>
+          </g>
+
+          <!-- right radio -->
+          <g transform="translate(260,132)">
+            <rect x="0" y="0" width="64" height="132" rx="14" fill="#221c17" stroke="#3a2f26" stroke-width="2"/>
+            <rect x="8" y="14" width="48" height="60" rx="6" fill="#0f0d0b"/>
+            <rect x="12" y="20" width="20" height="4" rx="2" fill="#f2a63e"/>
+            <rect x="12" y="28" width="34" height="3" rx="1.5" fill="#5a4f43"/>
+            <rect x="12" y="35" width="26" height="3" rx="1.5" fill="#5a4f43"/>
+            <circle cx="32" cy="96" r="14" fill="#2c241d" stroke="#f2a63e" stroke-width="2"/>
+            <rect x="26" y="-18" width="12" height="22" rx="4" fill="#3a2f26"/>
+          </g>
+
+          <g stroke="#f2a63e" stroke-width="2" stroke-linecap="round" opacity="0.85">
+            <path d="M168 150c14-10 30-10 44 0" fill="none"/>
+            <path d="M160 168c22-16 50-16 72 0" fill="none"/>
+            <path d="M152 186c30-22 70-22 100 0" fill="none"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST STRIP -->
+  <section class="strip">
+    <div class="wrap strip-row">
+      <div class="strip-item"><strong>Zero setup</strong><span>Power on, they find each other</span></div>
+      <div class="strip-item"><strong>Group intercom</strong><span>Every unit hears every talker</span></div>
+      <div class="strip-item"><strong>Open hardware</strong><span>ESP32 + ESP-NOW, hackable firmware</span></div>
+      <div class="strip-item"><strong>₹2999</strong><span>Per pair, ships as a set</span></div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <h2 class="section-title">How it works</h2>
+      <p class="section-sub">No app, no account, no pairing menu. This is the entire setup process.</p>
+
+      <ol class="steps">
+        <li class="step">
+          <div class="step-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 2v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 6a8 8 0 1 0 10 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <h3>1. Power on both units</h3>
+          <p>Each one names itself automatically and runs a quick self-test on its mic and speaker — you'll see it come alive in a couple seconds.</p>
+        </li>
+        <li class="step">
+          <div class="step-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="2.4" fill="currentColor"/><path d="M7.5 16.5a7 7 0 0 1 0-9M16.5 16.5a7 7 0 0 0 0-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.5 19.5a11 11 0 0 1 0-15M19.5 19.5a11 11 0 0 0 0-15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <h3>2. They find each other</h3>
+          <p>Each radio broadcasts a beacon and listens for others on the same channel. Two freshly powered-on units typically discover each other within a few seconds — no button press needed.</p>
+        </li>
+        <li class="step">
+          <div class="step-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26"><rect x="7" y="2" width="10" height="15" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 17v4M9 21h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <h3>3. Hold the button, talk</h3>
+          <p>Press and hold to speak — your voice goes out live to every unit in range at once. Let go, and you're back to listening. Classic hold-to-talk, group style.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section section-alt" id="features">
+    <div class="wrap">
+      <h2 class="section-title">Built for "just works," not "just launched"</h2>
+      <p class="section-sub">A small, honest feature set — everything here is something the firmware actually does.</p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="2.4" fill="currentColor"/><path d="M7.5 16.5a7 7 0 0 1 0-9M16.5 16.5a7 7 0 0 0 0-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <h3>Auto-discovery, always</h3>
+          <p>Any unit that comes into range is added to the mesh automatically. Walk away, come back — it reconnects on its own, no re-pairing.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 18a8 8 0 0 1 16 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 18a4 4 0 0 1 8 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="18" r="1.6" fill="currentColor"/></svg></div>
+          <h3>Party-line, not 1:1 calling</h3>
+          <p>There's no dialing a specific unit. Press the button and everyone powered-on in range hears you — built for groups, not pairs.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 12h4M16 12h4M9 12a3 3 0 1 1 6 0 3 3 0 0 1-6 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 6l16 12M4 18L20 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity="0"/></svg></div>
+          <h3>No SIM, no internet, no fees</h3>
+          <p>Radios talk directly to each other over 2.4GHz. No router, no data plan, no account, and nothing stops working because your phone has no bars.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3 4 7v5c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+          <h3>Long-range radio mode</h3>
+          <p>Runs on Espressif's long-range PHY by default — extra reach and a more robust link versus standard WiFi-band radio, on the same hardware.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="3" y="8" width="14" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M17 10.5h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
+          <h3>Runs on a power bank</h3>
+          <p>Draws a few hundred milliamps. A basic USB power bank comfortably gets you through a day of hiking, an event, or a shift.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="3" y="4" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 17v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6 8h6M6 11h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/></svg></div>
+          <h3>Optional status screen</h3>
+          <p>Add a small OLED and see your unit's name, battery estimate, and every nearby peer's signal strength at a glance.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RANGE -->
+  <section class="section" id="range">
+    <div class="wrap range-row">
+      <div class="range-copy">
+        <h2 class="section-title">About that 100m</h2>
+        <p>
+          In open air with a clear line of sight, PiWalkTalk units comfortably reach around
+          <strong>100 metres</strong>. That's the honest number, and it moves depending on your
+          surroundings — the same as any handheld radio.
+        </p>
+        <ul class="range-list">
+          <li><strong>Open field, line of sight</strong> — best case, easily 100m+.</li>
+          <li><strong>Indoors, through walls</strong> — expect noticeably less, same as WiFi.</li>
+          <li><strong>Dense obstacles / interference</strong> — range drops further, as with any 2.4GHz radio.</li>
+        </ul>
+        <p class="range-note">
+          We'd rather tell you how it behaves than print a number that only holds up on a rooftop.
+        </p>
+      </div>
+      <div class="range-art" aria-hidden="true">
+        <svg viewBox="0 0 320 320" width="100%" height="100%">
+          <circle cx="160" cy="160" r="140" fill="none" stroke="#f2a63e" stroke-width="1.4" stroke-dasharray="4 6" opacity="0.55"/>
+          <circle cx="160" cy="160" r="95" fill="none" stroke="#f2a63e" stroke-width="1.4" stroke-dasharray="4 6" opacity="0.4"/>
+          <circle cx="160" cy="160" r="50" fill="none" stroke="#f2a63e" stroke-width="1.4" stroke-dasharray="4 6" opacity="0.3"/>
+          <circle cx="160" cy="160" r="10" fill="#f2a63e"/>
+          <circle cx="243" cy="96" r="7" fill="#e8e2d8"/>
+          <text x="140" y="34" fill="#a89f92" font-size="12" font-family="ui-monospace, monospace">~100m open air</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- SPECS -->
+  <section class="section section-alt" id="specs">
+    <div class="wrap">
+      <h2 class="section-title">Specs, for the curious</h2>
+      <p class="section-sub">Built on well-known parts. Nothing proprietary, nothing locked down.</p>
+
+      <div class="specs-table">
+        <div class="specs-row"><span>Compute</span><span>ESP32-WROOM-32 (dual-core, WiFi/BLE)</span></div>
+        <div class="specs-row"><span>Radio link</span><span>ESP-NOW, open broadcast mesh, long-range PHY mode</span></div>
+        <div class="specs-row"><span>Microphone</span><span>INMP441 digital MEMS (I2S)</span></div>
+        <div class="specs-row"><span>Speaker amp</span><span>MAX98357A Class-D (I2S), 4–8Ω speaker</span></div>
+        <div class="specs-row"><span>Voice quality</span><span>16kHz sampled, voice-optimized companding</span></div>
+        <div class="specs-row"><span>Talk mode</span><span>Hold-to-talk, half-duplex, group broadcast</span></div>
+        <div class="specs-row"><span>Setup</span><span>None — auto-discovers and auto-names on boot</span></div>
+        <div class="specs-row"><span>Display</span><span>Optional 0.96" OLED — name, battery estimate, peer signal</span></div>
+        <div class="specs-row"><span>Power</span><span>5V USB / power bank</span></div>
+        <div class="specs-row"><span>Privacy</span><span>Open by design — no pairing, no encryption. Great for casual group use, not for private comms.</span></div>
+        <div class="specs-row"><span>In the box</span><span>2× PiWalkTalk units, ready to power on</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="section" id="order">
+    <div class="wrap">
+      <div class="price-card">
+        <div class="price-card-main">
+          <p class="eyebrow">PiWalkTalk — Pair</p>
+          <p class="price">₹2999 <span>/ pair</span></p>
+          <ul class="price-includes">
+            <li>2× walkie-talkie units</li>
+            <li>Auto-discover mesh, out of the box</li>
+            <li>Long-range mode enabled by default</li>
+          </ul>
+        </div>
+        <div class="price-card-cta">
+          <a class="btn btn-whatsapp btn-large" id="price-cta" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.6.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.6-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5C10.1 9 9.6 7.8 9.4 7.3c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.1 3c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.2-.6-.4Z"/><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.2-.4-4.5-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></svg>
+            Chat on WhatsApp to order
+          </a>
+          <p class="price-note">+91 98846 25747 — we'll confirm availability and delivery over chat.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section section-alt" id="faq">
+    <div class="wrap">
+      <h2 class="section-title">Questions</h2>
+      <div class="faq-list">
+        <details>
+          <summary>Do I need the internet or a SIM card?</summary>
+          <p>No. The two units talk directly to each other over 2.4GHz radio. No router, no WiFi network, no SIM, no data plan.</p>
+        </details>
+        <details>
+          <summary>How many people can join in?</summary>
+          <p>More than two. Any powered-on unit within range joins the mesh automatically and hears whoever is talking — it's built as a group intercom, not a 1:1 call.</p>
+        </details>
+        <details>
+          <summary>Can two people talk at the same time?</summary>
+          <p>It's half-duplex, like a classic walkie-talkie: whoever keys up first holds the floor until they let go, so audio never gets garbled by two people talking over each other.</p>
+        </details>
+        <details>
+          <summary>Is it private / encrypted?</summary>
+          <p>No — by design, this is an open broadcast with no pairing and no encryption. Anyone with a compatible unit on the same channel can transmit and listen. It's built for casual group use — camping, events, job sites — not for private communications.</p>
+        </details>
+        <details>
+          <summary>What's the actual range?</summary>
+          <p>Around 100 metres in open air with line of sight. Walls, floors, and obstacles reduce that, the same as with WiFi or any handheld radio — see the <a href="#range">range section</a> above.</p>
+        </details>
+        <details>
+          <summary>How do I order?</summary>
+          <p>Tap any "Order on WhatsApp" button — it opens a chat to +91 98846 25747 with your order pre-filled. We'll confirm stock, price, and delivery from there.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-row">
+    <div>
+      <p class="brand footer-brand">PiWalkTalk</p>
+      <p class="footer-tag">A small-batch DIY radio project. Open hardware, open firmware.</p>
+    </div>
+    <a class="footer-whatsapp" id="footer-cta" target="_blank" rel="noopener">Order on WhatsApp — +91 98846 25747</a>
+  </div>
+</footer>
+
+<a class="fab-whatsapp" id="fab-cta" target="_blank" rel="noopener" aria-label="Order on WhatsApp">
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.6.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.6-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5C10.1 9 9.6 7.8 9.4 7.3c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.1 3c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.2-.6-.4Z"/><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.2-.4-4.5-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></svg>
+</a>
+
+<script src="js/main.js"></script>
+</body>
+</html>

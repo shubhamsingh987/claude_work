@@ -1,0 +1,48 @@
+; Backup taken 2026-09-14 from kudo@pihole (/etc/asterisk/pjsip.conf)
+; This is the CUSTOM portion only (everything below Asterisk's stock commented
+; sample template, which is identical across every 22.10.1 install and not
+; reproduced here). Full byte-exact file is backed up on the Pi itself at
+; ~/asterisk-backup-<timestamp>/asterisk-etc-full/pjsip.conf
+;
+; sha256 of full file at backup time: 81e792906ed59c59b2b739d0fabede1b1a3c7bf521b736cb9dfce8d5b9ade3cc
+
+[ht813]
+type=endpoint
+context=from-ht813
+disallow=all
+allow=ulaw,alaw
+aors=ht813
+direct_media=no
+[ht813]
+type=aor
+contact=sip:192.168.1.24
+[ht813-identify]
+type=identify
+endpoint=ht813
+match=192.168.1.24
+; HT813 PBX ATA START
+; ==== BEGIN pbx_ata block (auto-added) ====
+[global]
+type=global
+endpoint_identifier_order=ip,username,anonymous
+[transport-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0
+[pbx_ata]
+type=endpoint
+context=from-ata
+disallow=all
+allow=ulaw
+allow=alaw
+aors=pbx_ata-aor
+direct_media=no
+[pbx_ata-aor]
+type=aor
+contact=sip:192.168.1.24:5060
+qualify_frequency=60
+[pbx_ata-identify]
+type=identify
+endpoint=pbx_ata
+match=192.168.1.24/32
+; ==== END pbx_ata block ====

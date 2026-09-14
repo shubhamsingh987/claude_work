@@ -1,0 +1,13 @@
+# Optional: real speaker separation. Install one of the two blocks below.
+
+# --- Option A: ECAPA voice embeddings + clustering ---
+#   No gated models and no token needed. On Windows install the CPU build:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch
+torch
+speechbrain
+scikit-learn
+numpy
+
+# --- Option B: pyannote (better, but needs HF_TOKEN + licence acceptance) ---
+#   Also accept the licence at huggingface.co/pyannote/speaker-diarization-3.1
+# pyannote.audio>=3.1

@@ -1,0 +1,79 @@
+; Backup taken 2026-09-14 from kudo@pihole (/etc/asterisk/extensions.conf)
+; This is the CUSTOM portion only (everything below Asterisk's stock commented
+; sample template). Full byte-exact file is backed up on the Pi itself at
+; ~/asterisk-backup-<timestamp>/asterisk-etc-full/extensions.conf
+;
+; sha256 of full file at backup time: 95b8224b8ffc197b8735c07c05c00e81e5f54dc2a0e1844cc22d7da5405a8963
+
+exten => t,1,Goto(#,1)                  ; If they take too long, give up
+exten => i,1,Playback(invalid)          ; "That's not valid, try again"
+exten => 600,1,Playback(demo-echotest)  ; Let them know what's going on
+        same => n,Echo()                        ; Do the echo test
+        same => n,Playback(demo-echodone)       ; Let them know it's over
+        same => n,Goto(s,6)             ; Start over
+exten => 76245,1,Gosub(page,s,1(SIP/Grandstream1))
+exten => _7XXX,1,Gosub(page,s,1(SIP/${EXTEN}))
+exten => 7999,1,Set(TIMEOUT(absolute)=60)
+        same => n,Page(Local/Grandstream1@page&Local/Xlite1@page&Local/1234@page/n,d)
+exten => 8500,1,VoiceMailMain()
+        same => n,Goto(s,6)
+[page]
+exten => _X.,1,Gosub(sub-page,s,1(SIP/${EXTEN}))
+        same => n,Hangup()
+[public]
+include => demo
+[default]
+include => demo
+[time]
+exten => _X.,30000(time),NoOp(Time: ${EXTEN} ${timezone})
+        same => n,Wait(0.25)
+        same => n,Answer()
+        same => n,Set(FUTURETIME=$[${EPOCH} + 12])
+        same => n,SayUnixTime(${FUTURETIME},Zulu,HNS)
+        same => n,SayPhonetic(z)
+        same => n,SayUnixTime(${FUTURETIME},${timezone},HNS)
+        same => n,Playback(spy-local)
+        same => n,WaitUntil(${FUTURETIME})
+        same => n,Playback(beep)
+        same => n,Return()
+[ani]
+exten => _X.,40000(ani),NoOp(ANI: ${EXTEN})
+        same => n,Wait(0.25)
+        same => n,Answer()
+        same => n,Playback(vm-from)
+        same => n,SayDigits(${CALLERID(ani)})
+        same => n,Wait(1.25)
+        same => n,SayDigits(${CALLERID(ani)})   ; playback again in case of missed digit
+        same => n,Return()
+[from-ht813]
+exten => s,1,NoOp(Incoming call from HT813 - routing to voicebot)
+ same => n,Answer()
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+exten => pbx_ata,1,NoOp(Incoming call from HT813 via pbx_ata - routing to voicebot)
+ same => n,Answer()
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+[from-ata]
+exten => s,1,NoOp(Incoming FXO call from ATA - routing to voicebot)
+ same => n,Answer()
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+exten => pbx_ata,1,NoOp(Incoming FXO call via pbx_ata - routing to voicebot)
+ same => n,Answer()
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+[from-ata]
+exten => _X.,1,NoOp(Incoming FXO call from ATA)
+ same => n,Answer()
+ same => n,Wait(1)
+ same => n,Set(TUNE=${RAND(1,3)})
+ same => n,GotoIf($["${TUNE}"="1"]?t1)
+ same => n,GotoIf($["${TUNE}"="2"]?t2)
+ same => n,Goto(t3)
+ same => n(t1),Playback(tune1)
+ same => n,Hangup()
+ same => n(t2),Playback(tune2)
+ same => n,Hangup()
+ same => n(t3),Playback(tune3)
+ same => n,Hangup()

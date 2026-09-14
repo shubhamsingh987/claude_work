@@ -1,0 +1,19 @@
+# Compiled build output / firmware artifacts
+ai-voice-recorder/firmware/.pio/
+**/.pio/
+*.o
+*.d
+*.elf
+*.bin
+*.map
+__pycache__/
+*.pyc
+
+# Personal data - recorded audio + transcripts, not source
+ai-voice-recorder/server/data/sessions/
+
+# Large pretrained model checkpoints (license/size concerns)
+ai-voice-recorder/server/models/
+
+# Nested git repo - has its own history, don't flatten it in here
+esp32-espnow-ptt/
