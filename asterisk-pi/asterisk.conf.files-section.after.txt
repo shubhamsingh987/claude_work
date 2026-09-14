@@ -1,0 +1,10 @@
+; The [files] section of /etc/asterisk/asterisk.conf, as set 2026-09-14.
+; Was previously fully commented out (default), which left the CLI control
+; socket owned root:root mode 0755 -- unreachable by "asterisk -rx" as a
+; non-root user without sudo. Setting astctlgroup to kudo's own group lets
+; the CLI work without sudo, since kudo's primary group is "kudo".
+
+[files]
+astctlpermissions = 0660
+astctlowner = root
+astctlgroup = kudo

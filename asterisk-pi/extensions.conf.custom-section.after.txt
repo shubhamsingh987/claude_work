@@ -1,0 +1,36 @@
+; Captured 2026-09-14 from kudo@pihole (/etc/asterisk/extensions.conf) AFTER the fix.
+; This is the CUSTOM portion only (everything below Asterisk's stock commented
+; sample template). Compare against extensions.conf.custom-section.before.txt:
+; the dead duplicate [from-ata] block (which played random tune1/2/3 audio and
+; was unreachable in normal operation) has been removed, and every call path
+; now plays the greeting + beep before handing off to the voicebot AGI.
+;
+; Live verification after applying (dialplan reload):
+;   asterisk -rx "dialplan show from-ata"  ->  2 extensions (12 priorities) in 1 context
+
+[from-ht813]
+exten => s,1,NoOp(Incoming call from HT813 - routing to voicebot)
+ same => n,Answer()
+ same => n,Playback(gangsta_greeting)
+ same => n,Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+exten => pbx_ata,1,NoOp(Incoming call from HT813 via pbx_ata - routing to voicebot)
+ same => n,Answer()
+ same => n,Playback(gangsta_greeting)
+ same => n,Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+[from-ata]
+exten => s,1,NoOp(Incoming FXO call from ATA - routing to voicebot)
+ same => n,Answer()
+ same => n,Playback(gangsta_greeting)
+ same => n,Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+exten => pbx_ata,1,NoOp(Incoming FXO call via pbx_ata - routing to voicebot)
+ same => n,Answer()
+ same => n,Playback(gangsta_greeting)
+ same => n,Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()

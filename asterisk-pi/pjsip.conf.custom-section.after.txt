@@ -1,0 +1,34 @@
+; Captured 2026-09-14 from kudo@pihole (/etc/asterisk/pjsip.conf) AFTER the fix.
+; This is the CUSTOM portion only (everything below Asterisk's stock commented
+; sample template). Compare against pjsip.conf.custom-section.before.txt to see
+; the change: the duplicate [ht813] endpoint/aor/identify block (which matched
+; the same source IP as pbx_ata, causing undefined behavior for which endpoint
+; handled an incoming call) has been removed. pbx_ata was kept because it has
+; qualify_frequency health monitoring; ht813 did not.
+;
+; Live verification after applying (pjsip reload):
+;   asterisk -rx "pjsip show endpoints"  ->  Objects found: 1 (pbx_ata only)
+
+[global]
+type=global
+endpoint_identifier_order=ip,username,anonymous
+[transport-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0
+[pbx_ata]
+type=endpoint
+context=from-ata
+disallow=all
+allow=ulaw
+allow=alaw
+aors=pbx_ata-aor
+direct_media=no
+[pbx_ata-aor]
+type=aor
+contact=sip:192.168.1.24:5060
+qualify_frequency=60
+[pbx_ata-identify]
+type=identify
+endpoint=pbx_ata
+match=192.168.1.24/32

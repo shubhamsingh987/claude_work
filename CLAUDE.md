@@ -2,10 +2,11 @@
 
 This repo tracks working files and backups from Claude Code sessions for shubhamsingh987.
 
-## pihole-asterisk-backup-2026-09-14/
+## asterisk-pi/
 
-Backup + working notes for the Asterisk PBX running on the home Raspberry Pi (hostname `pihole`,
-reachable via Raspberry Pi Connect remote shell as user `kudo`).
+Config, backups, and setup notes for the Asterisk PBX running on the home Raspberry Pi (hostname
+`pihole`, reachable via Raspberry Pi Connect remote shell as user `kudo`). See
+[`asterisk-pi/SETUP.md`](asterisk-pi/SETUP.md) for the full how-to-reproduce guide.
 
 ### System summary
 - Asterisk 22.10.1, built from source (not apt/dpkg-managed), running via systemd (`asterisk.service`).
@@ -24,26 +25,39 @@ via separate `identify` sections. Which one handles an incoming call is undefine
 voicebot), one dead leftover (plays random tune1/2/3 audio, unreachable in normal operation
 since FXO calls enter at extension `s`, not a dialed digit pattern).
 
-Planned fix: consolidate to a single endpoint definition (keeping the `pbx_ata` naming since it
-has qualify monitoring), and remove the dead duplicate `[from-ata]` tune block.
+**Fixed 2026-09-14**: consolidated to the single `pbx_ata` endpoint (kept over `ht813` since it
+has qualify monitoring), removed the dead duplicate `[from-ata]` tune block. Verified live via
+`pjsip show endpoints` (Objects found: 1) and `dialplan show from-ata`.
 
-### In progress: PBX greeting
-Adding a greeting + beep/chime before the voicebot AGI runs in `from-ht813` and `from-ata`
-contexts ("Hello, welcome, you have reached Gangsta's Paradise helpline. Please wait for the
-beep..."). Existing usable sound files on the Pi at `/var/lib/asterisk/sounds/en/`:
-`beep.gsm`, `beeperr.gsm`, `ascending-2tone.gsm`, `descending-2tone.gsm`. No TTS engine
-(flite/festival/espeak) is installed on the Pi; `sox` is available for audio conversion.
-Greeting audio is being generated locally (Windows TTS) and transferred over the remote shell.
+### Done: PBX greeting
+Every incoming call path now plays a greeting + beep before the voicebot AGI runs ("Hello!
+Welcome, you have reached the Gangsta's Paradise helpline. Please wait for the beep to shoot
+your query."). Audio generated locally via Windows TTS (`System.Speech.Synthesis`, 8kHz/16-bit
+mono), converted to GSM with ffmpeg, installed at
+`/var/lib/asterisk/sounds/en/gangsta_greeting.gsm` on the Pi. A copy lives in
+`asterisk-pi/sounds/gangsta_greeting.gsm`. Trailing beep uses Asterisk's stock `beep.gsm`.
 
-### Backups
-- `pjsip.conf.custom-section.before.txt` / `extensions.conf.custom-section.before.txt` — the
-  custom (non-stock-template) portions of both config files, as they stood before any edits,
-  captured 2026-09-14. Each file's stock Asterisk sample-config boilerplate is unchanged from
-  the 22.10.1 default and is not reproduced here.
-- A byte-exact full copy of `/etc/asterisk` also lives **on the Pi itself** at
-  `~/asterisk-backup-<timestamp>/asterisk-etc-full/` (created via `cp -a`) — this is the
-  authoritative rollback source if an edit needs to be reverted.
-- SHA256 checksums of the original files are recorded in the backup file headers.
+### Done: CLI socket permissions
+`asterisk -rx` now works as `kudo` without `sudo` — set `astctlgroup=kudo` in
+`/etc/asterisk/asterisk.conf`'s `[files]` section, then did a full `systemctl stop` +
+`start` (a reload alone doesn't recreate the socket). Hit a real gotcha here: the LSB init
+script didn't kill the old process cleanly, which left the PBX **fully down** for a few minutes
+until forced with a stop+start — see `asterisk-pi/SETUP.md` for the exact recovery steps if it
+happens again.
+
+### Config + backups (asterisk-pi/)
+- `pjsip.conf.custom-section.before.txt` / `.after.txt` and
+  `extensions.conf.custom-section.before.txt` / `.after.txt` — the custom (non-stock-template)
+  portions of both config files, before and after the 2026-09-14 fix. Each file's stock
+  Asterisk sample-config boilerplate is unchanged from the 22.10.1 default and not reproduced.
+- `asterisk.conf.files-section.after.txt` — the `[files]` socket-permission block.
+- `sounds/gangsta_greeting.gsm` — the greeting audio.
+- `SETUP.md` — full how-to-reproduce-or-restore guide.
+- A byte-exact full copy of `/etc/asterisk` (pre-fix) also lives **on the Pi itself** at
+  `~/asterisk-backup-<timestamp>/asterisk-etc-full/` (created via `cp -a`) — the authoritative
+  rollback source if an edit ever needs to be reverted. On-Pi post-edit backups also exist as
+  `*.bak.preclaudefix` next to each live config file.
+- SHA256 checksums of the original files are recorded in the "before" backup file headers.
 
 ### How to reach the Pi
 Via Raspberry Pi Connect remote shell in a browser (no direct SSH tooling was used this
