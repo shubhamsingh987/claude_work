@@ -2,6 +2,16 @@
 
 This repo tracks working files and backups from Claude Code sessions for shubhamsingh987.
 
+## pihole-services/
+
+Full map of every service running on `pihole` (URLs via both Tailscale and LAN) — see
+[`pihole-services/SERVICES.md`](pihole-services/SERVICES.md). Also has
+[`systemd-overrides/`](pihole-services/systemd-overrides/): restart-policy hardening for
+`asterisk`/`mediamtx`/`homebridge`/`filebrowser` after discovering `mediamtx`'s existing
+`Restart=always` was defeated by systemd's crash-loop protection during the CCTV drive outage
+below — it gave up restarting permanently after 5 failures in 10s, rather than actually keeping
+the service down "on purpose".
+
 ## asterisk-pi/
 
 Config, backups, and setup notes for the Asterisk PBX running on the home Raspberry Pi (hostname
