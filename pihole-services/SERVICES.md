@@ -20,15 +20,51 @@ also works if you're on the home network.
 | Samba (file shares) | `\\100.78.206.32\` | ports 445/139 |
 | SSH | `ssh pihole` | see root `CLAUDE.md` for setup |
 
-**CUPS — re-checked 2026-09-22, it was never actually broken.** Earlier note in this file was
-wrong: it's `systemd`-socket-activated (only starts when something touches
-`/run/cups/cups.sock`) and just hadn't been triggered since boot, so port 631 had nothing bound
-to it yet. Running any local CUPS command (e.g. `lpstat -r`) wakes it, after which the web UI at
-`:631` responds normally (`/admin/` correctly asks for your system login — `WebInterface No` in
-`cupsd.conf` hides the decorative browsing pages but doesn't block admin). No printers are
-configured yet (`lpstat -p` → "No destinations added") — that's just nobody having added one,
-not a fault. If it ever seems unresponsive again, that's the lazy-activation behavior, not a
-crash — touch the socket (any `lp*` command, or just hit `:631` in a browser) to wake it.
+**CUPS — actually fixed 2026-09-22** (an earlier note in this file claiming it was already fine
+via socket-activation turned out incomplete — see below). Two real issues, both resolved:
+1. It's `systemd`-socket-activated with `IdleExitTimeout 60` in `cupsd.conf` — it would start on
+   first touch, then **exit again after just 60 seconds idle**, and since `cups.socket` only
+   watches the local Unix socket (not TCP 631), a browser hitting `:631` directly could never
+   wake it back up — only a local `lp*` command could. Fixed: set `IdleExitTimeout 0` and
+   `sudo systemctl enable --now cups.service` so it runs persistently instead of relying on lazy
+   activation. Verified alive continuously past the old 60s window.
+2. Its access control (`<Location>` blocks in `cupsd.conf`) only had `Allow @LOCAL`, which
+   doesn't cover Tailscale's virtual interface — every other service is Tailscale-reachable,
+   CUPS wasn't. Fixed: added `Allow 100.64.0.0/10` (Tailscale's CGNAT range) to all four
+   `<Location>` blocks (`/`, `/admin`, `/admin/conf`, `/admin/log`). Verified `HTTP 200` from
+   both LAN and Tailscale after `sudo systemctl restart cups` (note: `reload` isn't supported by
+   this unit, must be `restart`). Backup: `/etc/cups/cupsd.conf.bak.preclaudefix`.
+
+No printers are configured yet (`lpstat -p` → "No destinations added") — that's just nobody
+having added one, not a fault.
+
+## CCTV drive — disconnected again (2026-09-23)
+
+The external drive at `/mnt/hdd` (label `cctv`) has **physically dropped off the USB bus a
+second time** (first was 2026-09-04, see `asterisk-pi/hdd-watchdog/README.md`) — confirmed via
+`lsblk`/`lsusb`: no `sdb` device, no JMicron USB bridge chip present at all. This took both
+**MediaMTX** (all 4 ports: RTSP/HLS/WebRTC/API) and **Filebrowser** (its entire serving root IS
+`/mnt/hdd`) down at the same moment (23:52:28 IST) — confirmed via kernel log: `I/O error`,
+`EXT4-fs ... Remounting filesystem read-only`, `USB disconnect, device number 6`.
+
+**`hdd-watchdog` worked exactly as designed** — detected the unhealthy mount within 5 minutes,
+cleanly stopped both dependent services, attempted unmount+fsck, correctly identified the device
+is genuinely gone (not just a filesystem error this time), and backed off rather than looping —
+this is its documented limitation (physical disconnection needs a human), not a bug. It's been
+retrying every 5 minutes since, logging each attempt (`journalctl -t hdd-watchdog`), and will
+recover both services automatically the moment the drive physically reconnects.
+
+**This needs your physical attention** — reseat the drive enclosure's USB cable (and check its
+power connection if it's externally powered) at the Pi. Once reconnected, no action needed;
+the watchdog picks it up within 5 minutes and brings MediaMTX + Filebrowser back on its own.
+
+The watchdog script (`asterisk-pi/hdd-watchdog/hdd-watchdog.sh`) was extended today to also
+stop/start `filebrowser` alongside `mediamtx` (previously only handled `mediamtx`) — added
+because this exact incident revealed the gap.
+
+**Everything else, re-verified 2026-09-23**: Pi-hole, Homebridge, Netdata, Samba, SSH, Cockpit
+(a `curl` test without `-k` for its self-signed cert falsely reported it down — actually fine,
+confirmed `HTTP 200` from LAN and Tailscale once tested properly) all genuinely healthy.
 
 ## Auto-restart hardening (2026-09-22)
 

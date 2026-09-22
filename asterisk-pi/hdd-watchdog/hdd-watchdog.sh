@@ -1,7 +1,9 @@
 #!/bin/bash
 # Monitors the CCTV recordings mount for I/O errors / forced-read-only
-# remounts and attempts automatic recovery: stop mediamtx, unmount, fsck,
-# remount, restart mediamtx.
+# remounts and attempts automatic recovery: stop mediamtx + filebrowser
+# (both consume this mount -- filebrowser's entire serving root IS
+# /mnt/hdd, see its RequiresMountsFor=), unmount, fsck, remount, restart
+# both services.
 #
 # Installed at /usr/local/bin/hdd-watchdog.sh on pihole, run every 5 minutes
 # by hdd-watchdog.timer. See README.md in this folder for install steps and
@@ -38,6 +40,8 @@ log "Unhealthy state detected on $MOUNT_POINT — starting recovery"
 
 systemctl stop mediamtx
 log "Stopped mediamtx"
+systemctl stop filebrowser
+log "Stopped filebrowser"
 
 # Give any lingering writers a moment to actually exit, then unmount
 # (falling back to a lazy unmount if something still has it open/wedged).
@@ -63,3 +67,5 @@ fi
 
 systemctl start mediamtx
 log "Started mediamtx"
+systemctl start filebrowser
+log "Started filebrowser"

@@ -13,8 +13,17 @@ up in `lsusb` — not a manual reseat, cause unknown, possibly an intermittent c
 
 This watchdog exists so that never happens silently again: every 5 minutes it checks the mount
 is actually healthy (not just "mounted", but *readable*), and if not, walks through the same
-recovery steps done manually on 2026-09-22: stop `mediamtx` → unmount → `e2fsck -y` → remount →
-restart `mediamtx`.
+recovery steps done manually on 2026-09-14: stop `mediamtx` + `filebrowser` → unmount →
+`e2fsck -y` → remount → restart both.
+
+**Second incident, 2026-09-23**: the drive disconnected again (physically gone from the USB bus
+— confirmed via `lsblk`/`lsusb`, not just a filesystem error this time). The watchdog worked
+exactly as intended: detected it within 5 minutes, cleanly stopped both dependent services,
+correctly identified the device was truly absent, and backed off to retry every 5 minutes rather
+than looping pointlessly — see "What it does NOT handle" below, this is by design. This incident
+is also what revealed `filebrowser` needed the same treatment as `mediamtx` (its serving root IS
+`/mnt/hdd` — it was going down at the same moment but nothing was bringing it back up), so the
+script was extended to handle both. See `pihole-services/SERVICES.md` for live status.
 
 ## Install
 
