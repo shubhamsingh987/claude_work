@@ -311,7 +311,7 @@ before hand-rolling hardware integration.**
 
 ### Smart Life / Tuya devices (2026-09-22)
 Built-in **Tuya** integration (Smart Life User Code + QR login, cloud-based) is set up and loaded:
-6 devices + 3 Tuya scenes (`Ac2 offf`, `Turn on ac2`, `Door`). None have an area assigned, so on
+6 devices + Tuya scenes. None have an area assigned, so on
 this HA version's area-based Overview they only appear under the **"Devices"** tile — which is why
 the user "couldn't see any toggles". Added `switch.diwali_lights_socket_1` and
 `switch.officeac_socket_1` as Overview Favorites (same Personalize flow as the UPS battery).
@@ -321,11 +321,25 @@ the user "couldn't see any toggles". Added `switch.diwali_lights_socket_1` and
   (DIY IR remote). None of the official Tuya / localtuya / tuya-local integrations handle IR
   sub-devices. Candidate fix: HACS `EnzoD86/tuya-smart-ir-ac` (creates `climate` entities) — needs a
   Tuya IoT developer project (Access ID/Secret, Smart Life account linked) that the user must create
-  themselves. Workaround meanwhile: the Smart Life scenes `Turn on ac2` / `Ac2 offf` are exposed as HA
-  scenes and can drive the IR AC.
+  themselves. **In use instead (2026-09-23)**: user created Smart Life Tap-to-Run scenes, which the
+  Tuya integration exposes as HA scenes after a config-entry reload — `scene.ac_on` / `scene.ac_off`
+  confirmed working by the user. (`scene.ac_on_door_open` / `scene.ac_off_on_door_close` showed
+  `unavailable` after the reload — possibly Smart Life *automations* rather than tap-to-run; not
+  investigated.) To add more AC presets: create the scene in Smart Life, then reload the Tuya entry.
 
-### Qingping Air Monitor Lite (BLE sensor) — UNRESOLVED, in progress
-All entities (CO2, humidity, PM10, PM2.5, temperature) show "Unavailable". Root cause **is not
+### Qingping Air Monitor Lite (BLE sensor) — RESOLVED 2026-09-23
+**Working again**: `Air Monitor Lite C86E` (CGDN1, BLE `CC:B5:D1:31:C8:6E`, area Living Room)
+reporting live CO2/humidity/PM10/PM2.5/temperature via the built-in `qingping` BLE integration.
+Bluetooth scanning had recovered on its own by this session (most likely the reboot the user did
+for the touch fix) — Settings → Bluetooth → Advertisement monitor
+(`/config/bluetooth/advertisement-monitor`) showed dozens of live advertisements. The Qingping
+itself only appeared a bit later, at a weak RSSI of **-82** — if it drops to "Unavailable" again,
+suspect range to the Pi 5 (onboard BT, enclosed case) before anything else. Note: the user
+described it as "based on homebridge", but Homebridge on `pihole` has **zero plugins installed**
+(`No plugins found` in its log) and no `_hap._tcp` HomeKit accessories were visible on the LAN — it
+was never going through Homebridge. History of the original outage kept below for reference.
+
+All entities (CO2, humidity, PM10, PM2.5, temperature) showed "Unavailable". Root cause **is not
 Qingping-specific** — confirmed the whole Bluetooth adapter has stopped actively scanning:
 - `hci0` (onboard BCM4345C0) is healthy at the kernel level — `dmesg` shows clean init, no
   errors, and `docker exec homeassistant bluetoothctl show` confirms `Powered: yes`. But it also
@@ -361,7 +375,8 @@ noise, not the actual cause. The theme works fine applied per-user via Profile �
 
 ### Open threads for next session
 1. Confirm touch sensitivity fix after an actual reboot (see touchscreen section).
-2. Fix Bluetooth `Discovering: no` → Qingping + iBeacon Tracker (see that section).
+2. ~~Fix Bluetooth `Discovering: no`~~ — resolved 2026-09-23, Qingping reporting. iBeacon Tracker
+   not re-checked.
 3. Rotate the SSH add-on's password off its weak factory default.
 4. If still wanted: build the "wallpaper on kiosk idle" feature (`browser_mod` + automation).
 5. Tuya IR AC control via `tuya-smart-ir-ac` (needs user-created Tuya IoT project); assign areas to
