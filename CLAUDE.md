@@ -143,6 +143,44 @@ NOT handle (physical disconnection, genuinely failing hardware, data lost during
 window). `smartctl` and `ffmpeg` were also installed on the Pi this session (useful for drive
 health checks and pulling live/recorded frames going forward).
 
+### Netdata + Asterisk metrics (2026-09-22)
+
+Researched FreePBX-style admin GUIs as an alternative way to get visibility into Asterisk (see
+chat history for the full comparison — FreePBX/Issabel/VitalPBX/PBXware all want to own
+`pjsip.conf`/`extensions.conf` via their own DB and would fight this hand-written config;
+FusionPBX isn't even Asterisk, it's FreeSWITCH). Landed on wiring Asterisk into the Netdata this
+Pi already runs (well — *used* to run; it was actually masked/uninstalled at the time, see
+below) instead, since it's genuinely read-only and can't touch config files.
+
+**What was done**: Netdata was reinstalled via its official kickstart script (`get.netdata.cloud/kickstart.sh`,
+downloaded first then run as a separate step — never pipe an installer script straight from
+`curl` into `sh`, download and inspect first) — the apt package had no installation candidate at
+all since the previous uninstall also dropped Netdata's own apt repo. Then, since this Asterisk
+is source-built (`/usr/src/asterisk-22.10.1`, source tree still intact), enabled the
+`res_chan_stats` module (it was explicitly excluded in `menuselect.makeopts`) via
+`./menuselect/menuselect --enable res_chan_stats menuselect.makeopts`, ran `make` (only compiles
+the one new module — modules are separate `.so` files, so this does NOT trigger a full Asterisk
+rebuild; took ~25s) then `make install`, and enabled `enabled=yes` / `server=127.0.0.1` in
+`/etc/asterisk/statsd.conf` (`res_statsd` itself was already built and running). Applying it
+needed a real `systemctl stop` + `start` (module loading isn't a `reload`-able change) — this
+time the old process died cleanly on stop with no orphan, unlike the 2026-09-14 incident.
+
+**Verified working end-to-end**: `module show like chan_stats` → running; Netdata's own charts
+API shows live `statsd_PJSIP.contacts.states.*` / `statsd_PJSIP.registrations.count_gauge`
+charts fed directly from Asterisk (confirmed non-zero real data — `Reachable_gauge` correctly
+reads `1`, matching the one real endpoint); `pjsip show endpoints` / `dialplan show from-ata`
+confirmed byte-identical to pre-rebuild (still exactly 1 `pbx_ata` endpoint, greeting+beep+AGI
+dialplan intact); `asterisk -rx` still works without sudo. Netdata UI: see
+[`pihole-services/SERVICES.md`](pihole-services/SERVICES.md) (`:19999`) — now also gives
+Asterisk process-level charts (CPU/mem/uptime/fds) via Netdata's own systemd/apps collectors as
+a side benefit, on top of the PJSIP-specific stats. Netdata's Asterisk StatsD collector metric
+set is coarse by design (channel/call/PJSIP-peer stats) — it does not surface AGI-script/voicebot-
+level detail (no transcripts, no per-utterance data).
+
+Backup taken before the rebuild: `~/asterisk-backup-<timestamp>-prebuild/` on the Pi (binary +
+full modules dir from before `res_chan_stats` was added) — rollback path if anything about this
+ever needs undoing (it hasn't). `statsd.conf.bak.preclaudefix` also sits next to the live config.
+
 ## pi5-ups-lcd-case/ — HAOS Pi 5 (Waveshare touchscreen + UPS HAT)
 
 A **different** Raspberry Pi from `pihole` above: runs Home Assistant OS, hostname

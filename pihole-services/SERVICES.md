@@ -10,6 +10,7 @@ also works if you're on the home network.
 | Homebridge UI | `http://100.78.206.32:8581` | |
 | Filebrowser | `http://100.78.206.32:8090` | |
 | Cockpit (system admin panel) | `https://100.78.206.32:9090` | full server dashboard — CPU/disk/logs/services |
+| **Netdata** (monitoring dashboard) | `http://100.78.206.32:19999` | reinstalled 2026-09-22, includes live Asterisk PJSIP/channel stats — see `asterisk-pi/` |
 | MediaMTX (CCTV) — RTSP | `rtsp://100.78.206.32:8554` | |
 | MediaMTX (CCTV) — HLS | `http://100.78.206.32:8888` | browser-playable |
 | MediaMTX (CCTV) — WebRTC | `http://100.78.206.32:8889` | |
@@ -21,8 +22,6 @@ also works if you're on the home network.
 **Not currently working, checked 2026-09-22:**
 - **CUPS**: installed, socket listening on 631, but doesn't actually respond — needs
   `sudo systemctl restart cups` (or deeper troubleshooting) before print jobs would work.
-- **Netdata**: masked and effectively uninstalled (`dpkg` shows `rc` = removed, config-only) —
-  not just stopped, would need a real reinstall to bring back.
 
 ## Auto-restart hardening (2026-09-22)
 
