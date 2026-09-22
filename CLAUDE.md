@@ -60,12 +60,50 @@ happens again.
 - SHA256 checksums of the original files are recorded in the "before" backup file headers.
 
 ### How to reach the Pi
-Via Raspberry Pi Connect remote shell in a browser (no direct SSH tooling was used this
-session — driven through browser automation). Terminal input quirk: synthetic Enter/Ctrl
-keypresses sent through normal browser automation don't register with this particular
-WebRTC/xterm.js terminal; they must be dispatched as real `KeyboardEvent`s via
-`document.querySelector('.xterm-helper-textarea')` with `keyCode`/`which` set, e.g.
+
+**Use SSH — set up 2026-09-22, this is now the normal way in.** Both this machine and `pihole`
+are on the same Tailscale tailnet (`tail5cad5d.ts.net`), already logged in, no token needed.
+A dedicated key was generated and its public half added to `kudo`'s `~/.ssh/authorized_keys`
+on the Pi:
+
+```
+ssh pihole "<command>"
+```
+
+This works out of the box because `~/.ssh/config` (local, not in this repo) has:
+```
+Host pihole
+    HostName 100.78.206.32
+    User kudo
+    IdentityFile ~/.ssh/id_ed25519_pihole
+    IdentitiesOnly yes
+```
+If `~/.ssh/config` or the key (`~/.ssh/id_ed25519_pihole`) is missing in a fresh environment,
+regenerate with `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_pihole` and get the pubkey appended
+to `~/.ssh/authorized_keys` on the Pi (needs one round-trip through the Raspberry Pi Connect
+browser method below, since that's the only way in without an existing key). Tailscale IP is
+`100.78.206.32` / MagicDNS `pihole.tail5cad5d.ts.net` — confirm with `tailscale status` locally
+if it's changed. Note: **`tailscale ssh` (the wrapper) does NOT work here** — it verifies host
+keys against Tailscale's coordination server, which has no record since `pihole` runs plain
+sshd rather than Tailscale SSH; use plain `ssh`/the `pihole` alias instead.
+
+**Gotcha**: non-interactive SSH sessions get a minimal `PATH` — `asterisk` isn't on it, use the
+full path `/usr/sbin/asterisk -rx "..."`. Also, `sudo` over non-interactive SSH fails ("a
+terminal is required") unless a password is piped in or the sudo timestamp is already cached
+from an interactive session — for anything needing sudo, either `ssh -t pihole` (allocates a
+real tty, still needs someone to type the password) or fall back to the browser method.
+
+**Fallback — Raspberry Pi Connect remote shell in a browser** (only needed if SSH is
+unavailable, e.g. bootstrapping a new key). Sign-in required each fresh browser session.
+Terminal input quirk: synthetic Enter/Ctrl keypresses sent through normal browser automation
+don't register with this particular WebRTC/xterm.js terminal; they must be dispatched as real
+`KeyboardEvent`s via `document.querySelector('.xterm-helper-textarea')` with `keyCode`/`which`
+set, e.g.
 `new KeyboardEvent('keydown', {key:'Enter', code:'Enter', keyCode:13, which:13, bubbles:true, cancelable:true})`.
 Also note: the terminal's scrollback silently drops old content; before reading back any
 command output, send `printf '\033[3J\033[H\033[2J'` first to purge scrollback, then run the
 command, or output near the buffer's start gets truncated.
+
+### Status checks
+- **2026-09-22**: `systemctl status asterisk` — `active (running)`, uptime 1 week (stable since
+  the 2026-09-14 fix+restart, no crashes), PID 630671, ~1h47m CPU consumed over the week.
