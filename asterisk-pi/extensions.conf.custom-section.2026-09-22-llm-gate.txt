@@ -1,0 +1,49 @@
+; Captured 2026-09-22 from kudo@pihole (/etc/asterisk/extensions.conf) after adding the
+; LLM-health gate + home-switch fallback. See SETUP.md section 7 for the full explanation.
+; [from-ht813] is unchanged (dead context -- no live endpoint uses it anymore since the
+; 2026-09-14 fix, kept only for reference). [from-ata] is the live one.
+;
+; Live verification after applying (dialplan reload):
+;   asterisk -rx "dialplan show from-ata"  ->  2 extensions (26 priorities) in 1 context
+
+[from-ht813]
+exten => s,1,NoOp(Incoming call from HT813 - routing to voicebot)
+ same => n,Answer()
+same => n,Playback(gangsta_greeting)
+same => n,Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+exten => pbx_ata,1,NoOp(Incoming call from HT813 via pbx_ata - routing to voicebot)
+ same => n,Answer()
+same => n,Playback(gangsta_greeting)
+same => n,Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+
+[from-ata]
+exten => s,1,NoOp(Incoming FXO call from ATA - routing to voicebot)
+ same => n,Answer()
+ same => n,Playback(gangsta_greeting)
+ same => n,System(/usr/local/bin/check-llm-health.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?llm_up:llm_down)
+ same => n(llm_up),Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+ same => n(llm_down),Playback(server_offline)
+ same => n,Read(choice,,1,,1,7)
+ same => n,GotoIf($["${choice}"="1"]?switch_on:hangup_now)
+ same => n(switch_on),System(/usr/local/bin/turn-on-home-switch.sh)
+ same => n(hangup_now),Hangup()
+exten => pbx_ata,1,NoOp(Incoming FXO call via pbx_ata - routing to voicebot)
+ same => n,Answer()
+ same => n,Playback(gangsta_greeting)
+ same => n,System(/usr/local/bin/check-llm-health.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?llm_up:llm_down)
+ same => n(llm_up),Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+ same => n(llm_down),Playback(server_offline)
+ same => n,Read(choice,,1,,1,7)
+ same => n,GotoIf($["${choice}"="1"]?switch_on:hangup_now)
+ same => n(switch_on),System(/usr/local/bin/turn-on-home-switch.sh)
+ same => n(hangup_now),Hangup()

@@ -47,6 +47,23 @@ mono), converted to GSM with ffmpeg, installed at
 `/var/lib/asterisk/sounds/en/gangsta_greeting.gsm` on the Pi. A copy lives in
 `asterisk-pi/sounds/gangsta_greeting.gsm`. Trailing beep uses Asterisk's stock `beep.gsm`.
 
+### Done: LLM-health gate + home-switch fallback (2026-09-22)
+Before playing the beep, `[from-ata]` now checks whether the voicebot's orchestrator
+(`192.168.1.31:5000`, a separate Windows box — see `ORCHESTRATOR_URL` in `agi_voicebot.py`) is
+actually reachable. If down: plays a "service offline" message instead of the beep, then offers
+DTMF `1` = turn on a Home Assistant switch (`switch.home_switch`, via HA's REST API) or
+`2`/timeout = hang up. Scripts: `/usr/local/bin/check-llm-health.sh`,
+`/usr/local/bin/turn-on-home-switch.sh` (copies in `asterisk-pi/llm-health-switch/`). Full
+writeup, including the exact dialplan and the HA-token creation steps (a human-only step — see
+below), in `asterisk-pi/SETUP.md` §7.
+
+**Home Assistant Long-Lived Access Tokens are a hard boundary — never handle them directly.**
+Confirmed via the pi5-ups-lcd-case work in this same file (search "hard-blocked" below): Claude
+Code's own classifier blocks writing one to a file, embedding one in a command, or even a
+read-only length check, every channel tried. `turn-on-home-switch.sh` reads the token from
+`/etc/asterisk/ha_token.secret` — that file must always be created by the user directly (SSH in
+themselves and `echo TOKEN | sudo tee ...`), never by an agent, no matter how it's asked.
+
 ### Done: CLI socket permissions
 `asterisk -rx` now works as `kudo` without `sudo` — set `astctlgroup=kudo` in
 `/etc/asterisk/asterisk.conf`'s `[files]` section, then did a full `systemctl stop` +
@@ -98,10 +115,15 @@ keys against Tailscale's coordination server, which has no record since `pihole`
 sshd rather than Tailscale SSH; use plain `ssh`/the `pihole` alias instead.
 
 **Gotcha**: non-interactive SSH sessions get a minimal `PATH` — `asterisk` isn't on it, use the
-full path `/usr/sbin/asterisk -rx "..."`. Also, `sudo` over non-interactive SSH fails ("a
-terminal is required") unless a password is piped in or the sudo timestamp is already cached
-from an interactive session — for anything needing sudo, either `ssh -t pihole` (allocates a
-real tty, still needs someone to type the password) or fall back to the browser method.
+full path `/usr/sbin/asterisk -rx "..."`.
+
+**`sudo` no longer needs a password at all** (set up 2026-09-22, user's explicit choice —
+`/etc/sudoers.d/kudo-nopasswd`: `kudo ALL=(ALL) NOPASSWD: ALL`, installed via `visudo -c`,
+verified with `sudo -k` first to prove it wasn't just riding the old cache). Before this, `sudo`
+over non-interactive SSH failed ("a terminal is required") unless a password was piped in or the
+timestamp was already cached from an interactive browser session — that whole class of problem
+is gone now. Security tradeoff to keep in mind: this session (or anything with this SSH key) now
+has unconditional root on `pihole`, no gate at all.
 
 **Fallback — Raspberry Pi Connect remote shell in a browser** (only needed if SSH is
 unavailable, e.g. bootstrapping a new key). Sign-in required each fresh browser session.

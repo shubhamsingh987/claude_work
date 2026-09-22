@@ -62,20 +62,31 @@ endpoints` actually reports reachability instead of `NonQual`.
 
 ## 3. Dialplan
 
-In `/etc/asterisk/extensions.conf` (see `extensions.conf.custom-section.after.txt`):
+In `/etc/asterisk/extensions.conf` (see `extensions.conf.custom-section.after.txt` for the exact
+current block — this is the shape of it):
 
 ```
 [from-ata]
 exten => s,1,NoOp(Incoming FXO call from ATA - routing to voicebot)
  same => n,Answer()
  same => n,Playback(gangsta_greeting)
- same => n,Playback(beep)
+ same => n,System(/usr/local/bin/check-llm-health.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?llm_up:llm_down)
+ same => n(llm_up),Playback(beep)
  same => n,AGI(agi_voicebot.py)
  same => n,Hangup()
+ same => n(llm_down),Playback(server_offline)
+ same => n,Read(choice,,1,,1,7)
+ same => n,GotoIf($["${choice}"="1"]?switch_on:hangup_now)
+ same => n(switch_on),System(/usr/local/bin/turn-on-home-switch.sh)
+ same => n(hangup_now),Hangup()
 ```
 
 `s` is the entry extension Asterisk uses for an FXO/analog call with no dialed digits, which is
-how every incoming landline call arrives here — that's the extension that actually matters.
+how every incoming landline call arrives here — that's the extension that actually matters. The
+identical block also exists under `exten => pbx_ata,1,...` in the same context (both extensions
+can be hit depending on how PJSIP routes the call). See §7 below for the LLM-health-gate/home-
+switch logic added on top of the plain greeting+beep+AGI flow.
 
 ## 4. Greeting audio
 
@@ -144,3 +155,50 @@ asterisk -rx "pjsip show endpoints"        # should show exactly 1 object: pbx_a
 asterisk -rx "dialplan show from-ata"      # should show Playback(gangsta_greeting) + beep
                                             # before AGI(agi_voicebot.py), no dead tune context
 ```
+
+## 7. LLM-health gate + home-switch fallback (2026-09-22)
+
+The voicebot's orchestrator (a separate Windows box at `192.168.1.31:5000` — see
+`ORCHESTRATOR_URL` in `agi_voicebot.py`) isn't always up. Instead of playing the beep and
+answering into dead air when it's down, the dialplan now checks first:
+
+- **`/usr/local/bin/check-llm-health.sh`**: `curl`s the orchestrator with a 3s timeout. Treats
+  ANY HTTP response (even a 404) as "up" — we don't know its exact routes, just whether
+  something's listening. Exit 0 = up, exit 1 = down. Called via `System()`, branches on the
+  `${SYSTEMSTATUS}` channel variable it sets (`SUCCESS`/`FAILURE`).
+- **If up**: unchanged behavior — beep, `AGI(agi_voicebot.py)`, hangup.
+- **If down**: plays `server_offline.gsm` ("Sorry, our voice assistant is currently offline.
+  Press 1 to turn on the home switch, or press 2 to disconnect."), then `Read()`s one digit with
+  a 7s timeout and exactly 1 attempt. Press `1` → runs
+  **`/usr/local/bin/turn-on-home-switch.sh`**, then hangs up. Anything else — `2`, no input, or
+  timeout — hangs up directly. (`Read()`'s empty/timeout result naturally falls through the
+  `GotoIf` to the hangup branch, so "press 2" and "say nothing" both just disconnect, matching
+  the ask.)
+- **`turn-on-home-switch.sh`** calls Home Assistant's REST API
+  (`POST http://192.168.1.131:8123/api/services/switch/turn_on`) for entity `switch.home_switch`
+  (confirm this is still the right entity_id if HA names change — the user renames devices
+  occasionally, this file doesn't get updated automatically). Auth is a **Home Assistant
+  Long-Lived Access Token** the script reads from `/etc/asterisk/ha_token.secret` — **this file
+  must be created by a human**, never by Claude: HA tokens are a hard boundary Claude Code's own
+  classifier blocks outright (writing one to a file, embedding one in a command, even a
+  read-only length check — confirmed repeatedly in the pi5-ups-lcd-case work, see that section
+  of this repo's root `CLAUDE.md`). Create the token in HA (profile → Long-Lived Access Tokens →
+  Create Token) and place it yourself:
+  ```bash
+  echo "YOUR_TOKEN" | sudo tee /etc/asterisk/ha_token.secret > /dev/null
+  sudo chmod 600 /etc/asterisk/ha_token.secret
+  sudo chown root:root /etc/asterisk/ha_token.secret
+  ```
+
+Test the health check directly any time without needing a real call:
+```
+/usr/local/bin/check-llm-health.sh; echo "exit: $?"      # 0 = orchestrator reachable
+/usr/local/bin/turn-on-home-switch.sh                     # logs result via `logger -t home-switch`
+journalctl -t home-switch -n 10 --no-pager
+```
+
+Both the orchestrator and Home Assistant were fully down (0% ping response, not just the
+service) when this was built, so only the "offline" branch's individual pieces were verified —
+the "online" happy-path branch is structurally unchanged from before and was verified via
+`dialplan show`, but a real end-to-end phone call is the only way to fully confirm the live
+experience on both branches.
