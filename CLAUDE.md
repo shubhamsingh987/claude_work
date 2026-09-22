@@ -326,6 +326,13 @@ the user "couldn't see any toggles". Added `switch.diwali_lights_socket_1` and
   confirmed working by the user. (`scene.ac_on_door_open` / `scene.ac_off_on_door_close` showed
   `unavailable` after the reload — possibly Smart Life *automations* rather than tap-to-run; not
   investigated.) To add more AC presets: create the scene in Smart Life, then reload the Tuya entry.
+- **Automation "Humidity above 65% - AC on"** (created 2026-09-23 via the UI's YAML editor): numeric_state
+  `sensor.air_monitor_lite_c86e_humidity` above 65 for 5 min → `scene.turn_on scene.ac_on`, with a
+  template condition skipping triggers whose `from_state` was `unavailable`/`unknown` (so a Qingping BLE
+  dropout+recovery can't re-fire it). ON only — no matching "turn off" rule yet. Tip for editing
+  automations from the browser pane: clipboard paste (ctrl+v) does NOT work there, but the `type` action
+  inserts multi-line YAML verbatim (no auto-indent); screenshots lag one action behind, so re-screenshot
+  before assuming a keystroke didn't land.
 
 ### Qingping Air Monitor Lite (BLE sensor) — RESOLVED 2026-09-23
 **Working again**: `Air Monitor Lite C86E` (CGDN1, BLE `CC:B5:D1:31:C8:6E`, area Living Room)
