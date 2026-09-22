@@ -108,6 +108,31 @@ command, or output near the buffer's start gets truncated.
 - **2026-09-22**: `systemctl status asterisk` — `active (running)`, uptime 1 week (stable since
   the 2026-09-14 fix+restart, no crashes), PID 630671, ~1h47m CPU consumed over the week.
 
+### CCTV recording outage + auto-recovery watchdog (2026-09-22)
+
+This same Pi also runs **MediaMTX** (CCTV recorder) writing to an external USB drive at
+`/mnt/hdd` (ext4, label `cctv`, mounted via `/etc/fstab` with `nofail`), recording one camera
+(`cam1`, RTSP source configured in `/usr/local/etc/mediamtx.yml`) in 15-minute fmp4 segments to
+`/mnt/hdd/recordings/%path/...`.
+
+**What happened**: the drive hit ext4 corruption on 2026-09-04 (`EXT4-fs (sdb1): error count
+since last fsck: 8`, kernel forced it into `emergency_ro` mode), `mediamtx.service` crashed 3
+seconds later mid-write and never restarted, and the drive eventually dropped off the USB bus
+entirely (gone from `lsblk`/`lsusb`) at some point after that — all **unnoticed for 2.5 weeks**
+until asked to pull up a recording on 2026-09-22. It came back on its own before a planned
+reboot was needed (a new USB bridge chip appeared in `lsusb` — user confirmed no manual reseat,
+cause unknown/intermittent) and `mediamtx` auto-recovered once the mount returned.
+
+**Fix — [`asterisk-pi/hdd-watchdog/`](asterisk-pi/hdd-watchdog/)**: a systemd timer
+(`hdd-watchdog.timer`, every 5 min) runs a script that checks the mount is actually *readable*
+(not just present), and on failure: stops `mediamtx` → unmounts → `e2fsck -y /dev/disk/by-label/cctv`
+→ remounts → restarts `mediamtx`, logging every step via `logger -t hdd-watchdog` (check with
+`journalctl -t hdd-watchdog`). Installed and enabled on the Pi as of 2026-09-22; see that
+folder's `README.md` for install steps, verification commands, and what it deliberately does
+NOT handle (physical disconnection, genuinely failing hardware, data lost during the corrupted
+window). `smartctl` and `ffmpeg` were also installed on the Pi this session (useful for drive
+health checks and pulling live/recorded frames going forward).
+
 ## pi5-ups-lcd-case/ — HAOS Pi 5 (Waveshare touchscreen + UPS HAT)
 
 A **different** Raspberry Pi from `pihole` above: runs Home Assistant OS, hostname

@@ -1,0 +1,7 @@
+[Unit]
+Description=Check /mnt/hdd (CCTV recordings) health and auto-recover on I/O error
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hdd-watchdog.sh
