@@ -16,12 +16,19 @@ also works if you're on the home network.
 | MediaMTX (CCTV) — WebRTC | `http://100.78.206.32:8889` | |
 | MediaMTX (CCTV) — API | `http://100.78.206.32:9996` | |
 | Asterisk (phone/voicebot) | no web UI — SIP only, see `asterisk-pi/` | |
+| CUPS (printing) | `http://100.78.206.32:631` | socket-activated — see note below |
 | Samba (file shares) | `\\100.78.206.32\` | ports 445/139 |
 | SSH | `ssh pihole` | see root `CLAUDE.md` for setup |
 
-**Not currently working, checked 2026-09-22:**
-- **CUPS**: installed, socket listening on 631, but doesn't actually respond — needs
-  `sudo systemctl restart cups` (or deeper troubleshooting) before print jobs would work.
+**CUPS — re-checked 2026-09-22, it was never actually broken.** Earlier note in this file was
+wrong: it's `systemd`-socket-activated (only starts when something touches
+`/run/cups/cups.sock`) and just hadn't been triggered since boot, so port 631 had nothing bound
+to it yet. Running any local CUPS command (e.g. `lpstat -r`) wakes it, after which the web UI at
+`:631` responds normally (`/admin/` correctly asks for your system login — `WebInterface No` in
+`cupsd.conf` hides the decorative browsing pages but doesn't block admin). No printers are
+configured yet (`lpstat -p` → "No destinations added") — that's just nobody having added one,
+not a fault. If it ever seems unresponsive again, that's the lazy-activation behavior, not a
+crash — touch the socket (any `lp*` command, or just hit `:631` in a browser) to wake it.
 
 ## Auto-restart hardening (2026-09-22)
 
