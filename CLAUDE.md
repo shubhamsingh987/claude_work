@@ -271,6 +271,21 @@ before hand-rolling hardware integration.**
 - The abandoned DIY container (`pi-ups-monitor`) was removed (`docker rm -f pi-ups-monitor`) —
   if it's somehow still running in a future session, it's dead code, safe to remove.
 
+### Smart Life / Tuya devices (2026-09-22)
+Built-in **Tuya** integration (Smart Life User Code + QR login, cloud-based) is set up and loaded:
+6 devices + 3 Tuya scenes (`Ac2 offf`, `Turn on ac2`, `Door`). None have an area assigned, so on
+this HA version's area-based Overview they only appear under the **"Devices"** tile — which is why
+the user "couldn't see any toggles". Added `switch.diwali_lights_socket_1` and
+`switch.officeac_socket_1` as Overview Favorites (same Personalize flow as the UPS battery).
+- Working: `Diwali lights` (10A plug, online), `Officeac` (16A plug) and `Door` (contact sensor) —
+  the latter two were **unavailable** at the time (offline in Tuya cloud; check in the Smart Life app).
+- **Unsupported, no entities**: `Smart IR` (IR blaster hub), `Ac` (IR AC remote under it), `Other`
+  (DIY IR remote). None of the official Tuya / localtuya / tuya-local integrations handle IR
+  sub-devices. Candidate fix: HACS `EnzoD86/tuya-smart-ir-ac` (creates `climate` entities) — needs a
+  Tuya IoT developer project (Access ID/Secret, Smart Life account linked) that the user must create
+  themselves. Workaround meanwhile: the Smart Life scenes `Turn on ac2` / `Ac2 offf` are exposed as HA
+  scenes and can drive the IR AC.
+
 ### Qingping Air Monitor Lite (BLE sensor) — UNRESOLVED, in progress
 All entities (CO2, humidity, PM10, PM2.5, temperature) show "Unavailable". Root cause **is not
 Qingping-specific** — confirmed the whole Bluetooth adapter has stopped actively scanning:
@@ -311,3 +326,5 @@ noise, not the actual cause. The theme works fine applied per-user via Profile �
 2. Fix Bluetooth `Discovering: no` → Qingping + iBeacon Tracker (see that section).
 3. Rotate the SSH add-on's password off its weak factory default.
 4. If still wanted: build the "wallpaper on kiosk idle" feature (`browser_mod` + automation).
+5. Tuya IR AC control via `tuya-smart-ir-ac` (needs user-created Tuya IoT project); assign areas to
+   Tuya devices once the user says which rooms they're in.
