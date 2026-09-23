@@ -1,0 +1,2 @@
+# These files get copied back onto the Pi / run in bash, so keep Unix line endings on Windows too.
+* text eol=lf
