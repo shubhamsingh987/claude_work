@@ -245,8 +245,9 @@ power backup. Case design lives in `pi5-ups-lcd-case/enclosure.scad`. Session lo
 rebuild in [`haos-pi5/RESTORE.md`](haos-pi5/RESTORE.md). Refresh with `bash haos-pi5/pull_backup.sh`
 after changing anything on the Pi, then commit. Secrets (`.storage/`, `secrets.yaml`, add-on
 `options.json`, full backup `.tar`s) are deliberately excluded and `.gitignore`d. Full HA backups
-go to OneDrive outside the repo. **The only full backup on the Pi is from 2026-07-29**: make a fresh
-one after big changes.
+(encrypted; the user holds the key) are copied to `C:\Users\Singh\OneDrive\HA-Backups\`, outside
+the repo, with a checksum log in [`haos-pi5/BACKUPS.md`](haos-pi5/BACKUPS.md). The user set up
+HA's backup system (encryption key + automatic backups) on 2026-09-23; first one is 318 MB.
 
 ### How to reach it
 **Use `ssh haos "<command>"` — key-based, no password, working since 2026-09-23.** Local
@@ -399,6 +400,13 @@ the user "couldn't see any toggles". Added `switch.diwali_lights_socket_1` and
   confirmed working by the user. (`scene.ac_on_door_open` / `scene.ac_off_on_door_close` showed
   `unavailable` after the reload — possibly Smart Life *automations* rather than tap-to-run; not
   investigated.) To add more AC presets: create the scene in Smart Life, then reload the Tuya entry.
+- **Reworked again 2026-09-23 16:09 (current version)**: AC **on** when Qingping temperature
+  > **30 °C AND** humidity > **60%** for 5 min (one `template` trigger, id `hot_humid`), AC **off**
+  when humidity < **55%** for 5 min (id `dry`). ⚠️ The Qingping reports temperature in **°F** (HA's
+  unit system is US), so the template converts °F→°C before comparing. A plain `above: 30` would
+  mean 30 °F. Template triggers fire only on false→true, so if it's already hot+humid when the
+  automation (re)loads it won't fire until the condition clears and returns. Backup
+  `automations.yaml.bak-pre-temp-rule`. The 70/60 and 60/50 notes below are older versions.
 - **Thresholds changed 2026-09-23 to on above 70% / off below 60%** (user request; alias now
   "Humidity AC control - on above 70%, off below 60%", entity id still
   `automation.humidity_above_65_ac_on`; backup `automations.yaml.bak-pre-70-60`). The 60/50 values

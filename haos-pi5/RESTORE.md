@@ -30,9 +30,9 @@ A full backup brings back everything, including the logins this folder can't hol
 3. Then still do **"Host-level tweaks"** below. Full backups do **not** include `config.txt` or
    `modules-load.d`, because those live on the OS partitions, not in `/config`.
 
-⚠️ As of 2026-09-23 the only full backup on the Pi is from **2026-07-29** (before the UPS HAT,
-Alexa, Qingping HomeKit and all automations). Make a fresh one after any big change:
-Settings → System → Backups → **Backup now**, then **Download** it into OneDrive `HA-Backups/`.
+Which backups exist, their checksums, and how to add new ones: [`BACKUPS.md`](BACKUPS.md).
+Latest: **2026-09-23 16:07**, encrypted, copied to OneDrive `HA-Backups/`. You need the backup
+**encryption key** from your password manager to restore it. Make a fresh one after big changes.
 
 ## Option B: rebuild by hand from this folder
 

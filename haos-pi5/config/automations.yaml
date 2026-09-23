@@ -1,63 +1,71 @@
 - id: '1790102634665'
-  alias: Humidity AC control - on above 70%, off below 60%
-  description: Runs the Smart Life "Ac on" scene when the Qingping's humidity stays
-    above 70% for 5 minutes, and "Ac off" when it stays below 60% for 5 minutes (10-point
-    gap so it can't flap). Announces each switch on shubham's 3rd Echo Dot. Skips
-    the moment the sensor comes back from a Bluetooth dropout, so a dropout alone
-    can't switch the AC.
+  alias: Humidity AC control - on above 30C and 60%, off below 55%
+  description: >-
+    AC on when it's hot AND humid: Qingping temperature above 30 C (the sensor reports in F, the
+    template converts) AND humidity above 60%, both holding for 5 minutes -> scene.ac_on. AC off
+    when humidity stays below 55% for 5 minutes -> scene.ac_off. Each switch is announced on
+    shubham's 3rd Echo Dot. Unavailable sensor readings count as "not hot/humid", and the off
+    trigger skips the moment the sensor comes back from unavailable.
   triggers:
-  - trigger: numeric_state
-    entity_id: sensor.qingping_air_monitor_lite_humidity
-    above: 70
+  - trigger: template
+    value_template: >-
+      {% set t = states('sensor.qingping_air_monitor_lite_temperature') | float(none) %}
+      {% set u = state_attr('sensor.qingping_air_monitor_lite_temperature', 'unit_of_measurement') %}
+      {% set c = ((t - 32) * 5 / 9) if (t is not none and u == '°F') else t %}
+      {{ c is not none and c > 30
+         and states('sensor.qingping_air_monitor_lite_humidity') | float(0) > 60 }}
     for:
       minutes: 5
-    id: humid
+    id: hot_humid
   - trigger: numeric_state
     entity_id: sensor.qingping_air_monitor_lite_humidity
-    below: 60
+    below: 55
     for:
       minutes: 5
     id: dry
-  conditions:
-  - condition: template
-    value_template: '{{ trigger.from_state.state not in [''unavailable'', ''unknown'']
-      }}'
+  conditions: []
   actions:
   - choose:
     - conditions:
       - condition: trigger
-        id: humid
+        id: hot_humid
       sequence:
       - action: scene.turn_on
         target:
           entity_id: scene.ac_on
       - action: notify.alexa_media
         data:
-          message: Humidity is {{ states('sensor.qingping_air_monitor_lite_humidity')
-            | round(0) }} percent. Turning the AC on.
+          message: >-
+            {% set t = states('sensor.qingping_air_monitor_lite_temperature') | float(0) %}
+            {% set u = state_attr('sensor.qingping_air_monitor_lite_temperature', 'unit_of_measurement') %}
+            It's {{ (((t - 32) * 5 / 9) if u == '°F' else t) | round(0) | int }} degrees and
+            {{ states('sensor.qingping_air_monitor_lite_humidity') | float(0) | round(0) | int }}
+            percent humidity. Turning the AC on.
           target: media_player.shubham_s_3rd_echo_dot
           data:
             type: tts
     - conditions:
       - condition: trigger
         id: dry
+      - condition: template
+        value_template: "{{ trigger.from_state.state not in ['unavailable', 'unknown'] }}"
       sequence:
       - action: scene.turn_on
         target:
           entity_id: scene.ac_off
       - action: notify.alexa_media
         data:
-          message: Humidity is down to {{ states('sensor.qingping_air_monitor_lite_humidity')
-            | round(0) }} percent. Turning the AC off.
+          message: >-
+            Humidity is down to {{ states('sensor.qingping_air_monitor_lite_humidity') | float(0) | round(0) | int }}
+            percent. Turning the AC off.
           target: media_player.shubham_s_3rd_echo_dot
           data:
             type: tts
   mode: single
 - id: '1790200000101'
   alias: High CO2 - Alexa says open the doors
-  description: >-
-    When the Qingping's CO2 stays above 1200 ppm for 5 minutes, the 3rd Echo Dot
-    announces it and asks to open the doors. Fires once per crossing (numeric_state);
+  description: When the Qingping's CO2 stays above 1200 ppm for 5 minutes, the 3rd
+    Echo Dot announces it and asks to open the doors. Fires once per crossing (numeric_state);
     skips the moment the sensor comes back from being unavailable.
   triggers:
   - trigger: numeric_state
@@ -67,26 +75,26 @@
       minutes: 5
   conditions:
   - condition: template
-    value_template: "{{ trigger.from_state.state not in ['unavailable', 'unknown'] }}"
+    value_template: '{{ trigger.from_state.state not in [''unavailable'', ''unknown'']
+      }}'
   actions:
   - action: notify.alexa_media
     data:
-      message: >-
-        Warning. High carbon dioxide detected, {{ states('sensor.qingping_air_monitor_lite_co2_carbon_dioxide') | int }}
-        parts per million. Please open the doors.
+      message: Warning. High carbon dioxide detected, {{ states('sensor.qingping_air_monitor_lite_co2_carbon_dioxide')
+        | int }} parts per million. Please open the doors.
       target: media_player.shubham_s_3rd_echo_dot
       data:
         type: tts
   mode: single
 - id: '1790200000102'
   alias: Welcome home - Alexa greets Shubham on home Wi-Fi
-  description: >-
-    Greets Shubham on the 3rd Echo Dot when he gets home. Two independent triggers (whichever the
-    iPhone reports first): (1) the Companion app's SSID sensor changes to the home Wi-Fi
-    (Tripleplay_A236...), (2) the iPhone's device_tracker enters the Home zone. iOS only reports
-    Wi-Fi changes when the app is woken, so the zone trigger is the more reliable one when actually
-    arriving. Ignores HA restarts / app reconnects (from unavailable/unknown) and won't repeat within
-    30 minutes of the last greeting (so both triggers firing on one arrival = one greeting).
+  description: 'Greets Shubham on the 3rd Echo Dot when he gets home. Two independent
+    triggers (whichever the iPhone reports first): (1) the Companion app''s SSID sensor
+    changes to the home Wi-Fi (Tripleplay_A236...), (2) the iPhone''s device_tracker
+    enters the Home zone. iOS only reports Wi-Fi changes when the app is woken, so
+    the zone trigger is the more reliable one when actually arriving. Ignores HA restarts
+    / app reconnects (from unavailable/unknown) and won''t repeat within 30 minutes
+    of the last greeting (so both triggers firing on one arrival = one greeting).'
   triggers:
   - trigger: state
     entity_id: sensor.shubhams_iphone_ssid
@@ -103,20 +111,19 @@
       - condition: trigger
         id: wifi
       - condition: template
-        value_template: >-
-          {{ trigger.to_state.state is search('Tripleplay_A236')
-             and trigger.from_state.state not in ['unavailable', 'unknown']
-             and not (trigger.from_state.state is search('Tripleplay_A236')) }}
+        value_template: "{{ trigger.to_state.state is search('Tripleplay_A236')\n
+          \  and trigger.from_state.state not in ['unavailable', 'unknown']\n   and
+          not (trigger.from_state.state is search('Tripleplay_A236')) }}"
     - condition: and
       conditions:
       - condition: trigger
         id: zone
       - condition: template
-        value_template: "{{ trigger.from_state.state not in ['unavailable', 'unknown', 'home'] }}"
+        value_template: '{{ trigger.from_state.state not in [''unavailable'', ''unknown'',
+          ''home''] }}'
   - condition: template
-    value_template: >-
-      {{ this.attributes.last_triggered is none
-         or (now() - this.attributes.last_triggered).total_seconds() > 1800 }}
+    value_template: "{{ this.attributes.last_triggered is none\n   or (now() - this.attributes.last_triggered).total_seconds()
+      > 1800 }}"
   actions:
   - action: notify.alexa_media
     data:
