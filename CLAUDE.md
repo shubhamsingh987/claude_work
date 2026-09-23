@@ -465,11 +465,30 @@ noise, not the actual cause. The theme works fine applied per-user via Profile �
    does it, not the agent. Web-terminal automation tip: typing a literal `"\r"` with the `type`
    action submits a command (the `key` action's Enter doesn't); the first command in a fresh
    session gets swallowed with the `corrupt history` message — just resend it.
-7. **"Pi Server" dashboard** (sidebar, `/pi-server`, created 2026-09-23): a button opening Cockpit
-   at `https://100.78.206.32:9090` in a new tab. Cockpit **cannot** be iframed (Webpage dashboard):
-   it sends `X-Frame-Options: sameorigin` + a CSP pinned to localhost, with no cockpit.conf option to
-   relax it — only a same-origin reverse proxy would work. Its cert is self-signed (SAN
-   localhost/127.0.0.1 only), so first visit per browser shows a warning.
+7. **Cockpit inside HA's sidebar — half done (2026-09-23).** User wants Cockpit to render *in* HA
+   when clicking a sidebar link, not a new tab. Cockpit can't be iframed cross-origin
+   (`X-Frame-Options: sameorigin`, no cockpit.conf override), so it's proxied through HA itself with
+   HACS **Hass Ingress** (`lovelylain/hass_ingress`, downloaded, v1.1.2) — same origin, so the frame
+   block no longer applies. Its HTTP client verifies TLS, so Cockpit's self-signed HTTPS won't work
+   → go plain HTTP on the LAN. Done: appended to `/config/configuration.yaml` (backup
+   `configuration.yaml.claude-backup-20260923`), `ha core check` passed:
+   ```yaml
+   ingress:
+     cockpit:
+       title: Cockpit
+       icon: mdi:server
+       require_admin: true
+       url: http://192.168.1.28:9090$http_x_ingress_path   # upstream path = /api/ingress/cockpit/...
+   ```
+   **Still needed**: (a) an HA restart — the agent was blocked by the auto-mode classifier
+   ("Modify Shared Resources") from sending `ha core restart`; the user has to trigger it; (b) once
+   `pihole` is back online, `/etc/cockpit/cockpit.conf` there:
+   `[WebService]` `UrlRoot = /api/ingress/cockpit`, `AllowUnencrypted = true`, and `Origins =`
+   HA's origins (`http://192.168.1.131:8123 http://homeassistant.local:8123`) plus the direct ones
+   (`https://192.168.1.28:9090 https://100.78.206.32:9090 https://pihole.tail5cad5d.ts.net:9090`),
+   then `sudo systemctl restart cockpit.socket`. Note UrlRoot moves direct access to
+   `https://<pihole>:9090/api/ingress/cockpit/`. (c) delete the interim "Pi Server" dashboard
+   (`/pi-server`, a new-tab button to Cockpit) the user rejected, once the Ingress panel works.
 8. Alexa: HACS "Alexa Media Player" was being downloaded by the user (needs HA restart + the user's
    own Amazon login). Pending after that: "humidity back below 55% → Ac off" automation and Alexa
    announcements on both humidity automations.
