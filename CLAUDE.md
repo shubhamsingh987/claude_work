@@ -271,6 +271,12 @@ look_for_keys=False, allow_agent=False)`.
   won't exist until the `i2c-dev` module is ALSO loaded — Pi 5/HAOS doesn't auto-load it:
   `sudo -n docker run --rm --privileged -v /lib/modules:/lib/modules:ro -v /dev:/dev alpine modprobe i2c-dev`
   (host-global, kernel modules aren't containerized — no `--pid=host` needed for this one).
+  **Now persistent (2026-09-23)**: a manual `modprobe` does NOT survive reboot — that silently broke
+  the UPS HAT integration for ~12h after a reboot (`FileNotFoundError: '/dev/i2c-1'` every 10 min).
+  Fixed by writing `i2c-dev` to `/mnt/overlay/etc/modules-load.d/i2c-dev.conf` (HAOS bind-mounts
+  that persistent overlay partition, `nvme0n1p7`, over `/etc/modules-load.d`), via
+  `sudo -n docker run --rm --privileged -v /mnt/overlay/etc/modules-load.d:/mld alpine sh -c 'echo i2c-dev > /mld/i2c-dev.conf'`.
+  If the UPS HAT ever shows "Needs attention / No such file /dev/i2c-1" again, check that file first.
 - **Pi 5 exposes THREE I2C buses**, not just one: `i2c-1` is the real GPIO-header bus HATs
   actually use; `i2c-13` and `i2c-14` are internal RP1 buses that ACK *every* address when
   scanned (false-positive noise from `i2cdetect` — ignore them, only trust `i2c-1`'s results).
@@ -359,15 +365,42 @@ the user "couldn't see any toggles". Added `switch.diwali_lights_socket_1` and
   confirmed working by the user. (`scene.ac_on_door_open` / `scene.ac_off_on_door_close` showed
   `unavailable` after the reload — possibly Smart Life *automations* rather than tap-to-run; not
   investigated.) To add more AC presets: create the scene in Smart Life, then reload the Tuya entry.
-- **Automation "Humidity above 65% - AC on"** (created 2026-09-23 via the UI's YAML editor): numeric_state
-  `sensor.air_monitor_lite_c86e_humidity` above 65 for 5 min → `scene.turn_on scene.ac_on`, with a
-  template condition skipping triggers whose `from_state` was `unavailable`/`unknown` (so a Qingping BLE
-  dropout+recovery can't re-fire it). ON only — no matching "turn off" rule yet. Tip for editing
+- **Automation "Humidity AC control - on above 60%, off below 50%"** (id `1790102634665`, originally
+  "Humidity above 65% - AC on", reworked 2026-09-23): two numeric_state triggers on
+  `sensor.qingping_air_monitor_lite_humidity` (HomeKit/Wi-Fi entity — was the old BLE
+  `sensor.air_monitor_lite_c86e_humidity` until the Qingping moved to HomeKit), `above: 60` for 5 min
+  (trigger id `humid`) → `scene.ac_on` and `below: 50` for 5 min (id `dry`) → `scene.ac_off`, via a
+  `choose`. Each branch then speaks on the 3rd Echo Dot via `notify.alexa_media` (see Alexa section).
+  Keeps the template condition skipping triggers whose `from_state` was `unavailable`/`unknown`.
+  Numeric-state triggers only fire on *crossing* the threshold. Pre-HomeKit copy saved as
+  `/homeassistant/automations.yaml.bak-pre-homekit`. Tip for editing
   automations from the browser pane: clipboard paste (ctrl+v) does NOT work there, but the `type` action
   inserts multi-line YAML verbatim (no auto-indent); screenshots lag one action behind, so re-screenshot
   before assuming a keystroke didn't land.
 
-### Qingping Air Monitor Lite (BLE sensor) — RESOLVED 2026-09-23
+### Alexa Media Player (Echo TTS) — working 2026-09-23
+HACS custom integration `alandtse/alexa_media_player` (v5.16.1). 9 `media_player.*` entities incl.
+`media_player.shubham_s_3rd_echo_dot` (the user's "3rd Alexa"), `shubham_s_echo_dot`, `show`, and
+`everywhere` (all speakers). Make Alexa speak with
+`action: notify.alexa_media` / `data: {message: "...", target: media_player.<echo>, data: {type: tts}}`
+(`type: announce` for chime-style). Setup gotchas: the config flow's Submit launches an **external
+Amazon login popup** that kills the Claude browser pane — the Amazon login step must be done in the
+user's own normal browser, and it's their credentials anyway (never enter them). Local URL set to
+`http://homeassistant.local:8123` (user wants mDNS everywhere, not the IP). An empty-looking config
+form just means it's still loading — wait a few seconds.
+
+### Qingping Air Monitor Lite — now on Wi-Fi via HomeKit (2026-09-23)
+**Moved off Bluetooth entirely.** BLE kept dropping (RSSI ~-82 through the Pi's enclosed HAT/LCD
+stack). It's a HomeKit model (setup code on the device), and was found sitting in Wi-Fi *setup mode*
+(broadcasting its own hotspot, Wi-Fi MAC `cc:b5:d1:31:c8:6c`, seen briefly at `192.168.1.128`); the
+user joined it to home Wi-Fi from their phone and HA auto-discovered + paired it via **HomeKit
+Device** (`homekit_controller`, zeroconf). Entities: `sensor.qingping_air_monitor_lite_{humidity,
+temperature,co2_carbon_dioxide,pm2_5_density,pm10_density,air_quality,battery}` — updates every few
+seconds. The old BLE `qingping` integration was removed and its Bluetooth re-discovery **ignored** so
+it doesn't come back. If it goes unavailable now, suspect Wi-Fi/power (it sleeps its radios on
+battery), not range to the Pi. History of the old BLE setup kept below for reference.
+
+#### (Historical) BLE setup — RESOLVED 2026-09-23, then replaced by HomeKit
 **Working again**: `Air Monitor Lite C86E` (CGDN1, BLE `CC:B5:D1:31:C8:6E`, area Living Room)
 reporting live CO2/humidity/PM10/PM2.5/temperature via the built-in `qingping` BLE integration.
 Bluetooth scanning had recovered on its own by this session (most likely the reboot the user did
