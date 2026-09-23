@@ -109,7 +109,7 @@ Entity IDs the automations rely on (rename entities to these if they come back d
   `configuration.yaml`. It's invalid on this HA version and boots straight into recovery mode.
 - Overview favorites: UPS `Battery`, Tuya plugs (pencil icon → Personalize → Add favorite).
 - iPhone Shortcut: Wi-Fi join `Tripleplay_A236 4th floor` → Home Assistant → Run Script →
-  "Welcome home announcement".
+  "Welcome back home Shubham".
 
 ### 8. Verify
 - `ssh haos "ls /dev/i2c-1"` exists, and the UPS HAT integration shows a battery %.

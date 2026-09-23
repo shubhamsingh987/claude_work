@@ -20,7 +20,6 @@ hassio_multicast  ghcr.io/home-assistant/aarch64-hassio-multicast:2026.08.0
 hassio_observer  ghcr.io/home-assistant/aarch64-hassio-observer:2026.08.0
 hassio_supervisor  ghcr.io/home-assistant/aarch64-hassio-supervisor:latest
 homeassistant  ghcr.io/home-assistant/raspberrypi5-64-homeassistant:2026.9.3
-peaceful_fermat  alpine
 ```
 
 ## Integrations (config entries; titles omitted - some contain account emails)
@@ -84,7 +83,7 @@ waveshare_ups_hat_d 0.1.0
 ```
 total 330764
 drwxr-xr-x    2 root     root          4096 Sep 23 10:37 .
-drwxr-xr-x    1 root     root          4096 Sep 23 10:40 ..
+drwxr-xr-x    1 root     root          4096 Sep 23 10:45 ..
 -rw-r--r--    1 root     root      21022720 Jul 28 18:44 Home_Assistant_Core_2026.7.2_2026-07-29_00.14_20258251.tar
 -rw-r--r--    1 root     root     317665280 Sep 23 10:37 automatic_backup_2026_9_3_2026-09-23_16.07_22616998.tar
 ```

@@ -1,5 +1,5 @@
 welcome_home:
-  alias: Welcome home announcement
+  alias: Welcome back home Shubham
   description: >-
     Alexa (shubham's 3rd Echo Dot) says "Welcome back home, Master Shubham."
     Run from an iPhone Shortcut (Home Assistant app -> Run Script) when joining home Wi-Fi.

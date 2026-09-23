@@ -464,7 +464,7 @@ Automations reload; backup `automations.yaml.bak-pre-co2-welcome`):
   cooldown. Backup of the Wi-Fi-only version: `automations.yaml.bak-pre-zone-trigger`.
   **Superseded 2026-09-23 by an iPhone Shortcut** (user's choice): this automation is now turned
   **off** (`automation.turn_off`, kept in `automations.yaml`, not deleted). Instead
-  `script.welcome_home` ("Welcome home announcement", in `/homeassistant/scripts.yaml` — was empty
+  `script.welcome_home` ("Welcome back home Shubham", in `/homeassistant/scripts.yaml` — was empty
   before; backup `scripts.yaml.bak-pre-welcome`) does the Alexa TTS, and the user runs it from an iOS
   Shortcuts personal automation (Wi-Fi join `Tripleplay_A236 4th floor` → Home Assistant "Run Script").
   Don't re-enable the automation without asking — it would double-greet.

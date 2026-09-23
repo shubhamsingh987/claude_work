@@ -1,19 +1,18 @@
 - id: '1790102634665'
   alias: Humidity AC control - on above 30C and 60%, off below 55%
-  description: >-
-    AC on when it's hot AND humid: Qingping temperature above 30 C (the sensor reports in F, the
-    template converts) AND humidity above 60%, both holding for 5 minutes -> scene.ac_on. AC off
-    when humidity stays below 55% for 5 minutes -> scene.ac_off. Each switch is announced on
-    shubham's 3rd Echo Dot. Unavailable sensor readings count as "not hot/humid", and the off
-    trigger skips the moment the sensor comes back from unavailable.
+  description: 'AC on when it''s hot AND humid: Qingping temperature above 30 C (the
+    sensor reports in F, the template converts) AND humidity above 60%, both holding
+    for 5 minutes -> scene.ac_on. AC off when humidity stays below 55% for 5 minutes
+    -> scene.ac_off. Each switch is announced on shubham''s 3rd Echo Dot. Unavailable
+    sensor readings count as "not hot/humid", and the off trigger skips the moment
+    the sensor comes back from unavailable.'
   triggers:
   - trigger: template
-    value_template: >-
-      {% set t = states('sensor.qingping_air_monitor_lite_temperature') | float(none) %}
-      {% set u = state_attr('sensor.qingping_air_monitor_lite_temperature', 'unit_of_measurement') %}
-      {% set c = ((t - 32) * 5 / 9) if (t is not none and u == '°F') else t %}
-      {{ c is not none and c > 30
-         and states('sensor.qingping_air_monitor_lite_humidity') | float(0) > 60 }}
+    value_template: "{% set t = states('sensor.qingping_air_monitor_lite_temperature')
+      | float(none) %} {% set u = state_attr('sensor.qingping_air_monitor_lite_temperature',
+      'unit_of_measurement') %} {% set c = ((t - 32) * 5 / 9) if (t is not none and
+      u == '°F') else t %} {{ c is not none and c > 30\n   and states('sensor.qingping_air_monitor_lite_humidity')
+      | float(0) > 60 }}"
     for:
       minutes: 5
     id: hot_humid
@@ -35,12 +34,11 @@
           entity_id: scene.ac_on
       - action: notify.alexa_media
         data:
-          message: >-
-            {% set t = states('sensor.qingping_air_monitor_lite_temperature') | float(0) %}
-            {% set u = state_attr('sensor.qingping_air_monitor_lite_temperature', 'unit_of_measurement') %}
-            It's {{ (((t - 32) * 5 / 9) if u == '°F' else t) | round(0) | int }} degrees and
-            {{ states('sensor.qingping_air_monitor_lite_humidity') | float(0) | round(0) | int }}
-            percent humidity. Turning the AC on.
+          message: '{% set t = states(''sensor.qingping_air_monitor_lite_temperature'')
+            | float(0) %} {% set u = state_attr(''sensor.qingping_air_monitor_lite_temperature'',
+            ''unit_of_measurement'') %} It''s {{ (((t - 32) * 5 / 9) if u == ''°F''
+            else t) | round(0) | int }} degrees and {{ states(''sensor.qingping_air_monitor_lite_humidity'')
+            | float(0) | round(0) | int }} percent humidity. Turning the AC on.'
           target: media_player.shubham_s_3rd_echo_dot
           data:
             type: tts
@@ -48,16 +46,16 @@
       - condition: trigger
         id: dry
       - condition: template
-        value_template: "{{ trigger.from_state.state not in ['unavailable', 'unknown'] }}"
+        value_template: '{{ trigger.from_state.state not in [''unavailable'', ''unknown'']
+          }}'
       sequence:
       - action: scene.turn_on
         target:
           entity_id: scene.ac_off
       - action: notify.alexa_media
         data:
-          message: >-
-            Humidity is down to {{ states('sensor.qingping_air_monitor_lite_humidity') | float(0) | round(0) | int }}
-            percent. Turning the AC off.
+          message: Humidity is down to {{ states('sensor.qingping_air_monitor_lite_humidity')
+            | float(0) | round(0) | int }} percent. Turning the AC off.
           target: media_player.shubham_s_3rd_echo_dot
           data:
             type: tts
@@ -82,52 +80,6 @@
     data:
       message: Warning. High carbon dioxide detected, {{ states('sensor.qingping_air_monitor_lite_co2_carbon_dioxide')
         | int }} parts per million. Please open the doors.
-      target: media_player.shubham_s_3rd_echo_dot
-      data:
-        type: tts
-  mode: single
-- id: '1790200000102'
-  alias: Welcome home - Alexa greets Shubham on home Wi-Fi
-  description: 'Greets Shubham on the 3rd Echo Dot when he gets home. Two independent
-    triggers (whichever the iPhone reports first): (1) the Companion app''s SSID sensor
-    changes to the home Wi-Fi (Tripleplay_A236...), (2) the iPhone''s device_tracker
-    enters the Home zone. iOS only reports Wi-Fi changes when the app is woken, so
-    the zone trigger is the more reliable one when actually arriving. Ignores HA restarts
-    / app reconnects (from unavailable/unknown) and won''t repeat within 30 minutes
-    of the last greeting (so both triggers firing on one arrival = one greeting).'
-  triggers:
-  - trigger: state
-    entity_id: sensor.shubhams_iphone_ssid
-    id: wifi
-  - trigger: state
-    entity_id: device_tracker.shubhams_iphone
-    to: home
-    id: zone
-  conditions:
-  - condition: or
-    conditions:
-    - condition: and
-      conditions:
-      - condition: trigger
-        id: wifi
-      - condition: template
-        value_template: "{{ trigger.to_state.state is search('Tripleplay_A236')\n
-          \  and trigger.from_state.state not in ['unavailable', 'unknown']\n   and
-          not (trigger.from_state.state is search('Tripleplay_A236')) }}"
-    - condition: and
-      conditions:
-      - condition: trigger
-        id: zone
-      - condition: template
-        value_template: '{{ trigger.from_state.state not in [''unavailable'', ''unknown'',
-          ''home''] }}'
-  - condition: template
-    value_template: "{{ this.attributes.last_triggered is none\n   or (now() - this.attributes.last_triggered).total_seconds()
-      > 1800 }}"
-  actions:
-  - action: notify.alexa_media
-    data:
-      message: Welcome back home, Master Shubham.
       target: media_player.shubham_s_3rd_echo_dot
       data:
         type: tts
