@@ -96,6 +96,16 @@ the playback server all `HTTP 200`; RTSP port open), Samba, SSH — all healthy.
 resumed (new segments landing in `/mnt/hdd/recordings/cam1/`), Asterisk's `pbx_ata` endpoint
 `Avail`. (Cockpit uses a self-signed cert — test with `curl -k`, otherwise it falsely looks down.)
 
+## Whole Pi offline (2026-09-23, ~01:00 IST)
+
+Later the same night, `pihole` dropped off the network entirely: no ping on LAN (`192.168.1.28`),
+no ARP entry, Tailscale showing it `offline, last seen 4h ago`. Not reachable any way remotely —
+needs a physical check / power-cycle. Unconfirmed guess worth checking once it's back: the
+repeated USB drive dropouts plus a full crash can both be symptoms of an undersized power supply
+on this Pi 3 (bus-powered HDD); `vcgencmd get_throttled` (non-zero = under-voltage seen) and
+`journalctl -b -1 -k | grep -i voltage` after it boots will say. LAN DNS kept working because
+clients use the router (`192.168.1.1`), not Pi-hole directly.
+
 ## Auto-restart hardening (2026-09-22)
 
 See [`systemd-overrides/`](systemd-overrides/) — drop-in overrides adding/widening restart

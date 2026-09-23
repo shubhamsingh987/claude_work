@@ -421,3 +421,22 @@ noise, not the actual cause. The theme works fine applied per-user via Profile �
 4. If still wanted: build the "wallpaper on kiosk idle" feature (`browser_mod` + automation).
 5. Tuya IR AC control via `tuya-smart-ir-ac` (needs user-created Tuya IoT project); assign areas to
    Tuya devices once the user says which rooms they're in.
+6. **Key-based SSH to HAOS — in progress, NOT working yet (2026-09-23).** Local side is done:
+   `~/.ssh/config` has `Host haos` (192.168.1.131, user `hassio`, `IdentityFile ~/.ssh/id_ed25519_haos`).
+   That key was deliberately generated so its variable part has no `l`/`1`/`I`/`O`/`0` — the first
+   attempt (`id_ed25519_hapi`, `claude-code@hapi`) got hand-typed into the add-on config with `1`→`l`
+   at byte 53 (proved via `cmp -l` in the web terminal), because clipboard paste doesn't work in the
+   Claude browser pane. As of last check the add-on still holds that broken `@hapi` key; the user
+   needs to replace it with `claude-code-haos` (Apps → Advanced SSH & Web Terminal → Configuration →
+   ssh → authorized_keys), Save, restart the add-on. Adding the key is a security setting — the user
+   does it, not the agent. Web-terminal automation tip: typing a literal `"\r"` with the `type`
+   action submits a command (the `key` action's Enter doesn't); the first command in a fresh
+   session gets swallowed with the `corrupt history` message — just resend it.
+7. **"Pi Server" dashboard** (sidebar, `/pi-server`, created 2026-09-23): a button opening Cockpit
+   at `https://100.78.206.32:9090` in a new tab. Cockpit **cannot** be iframed (Webpage dashboard):
+   it sends `X-Frame-Options: sameorigin` + a CSP pinned to localhost, with no cockpit.conf option to
+   relax it — only a same-origin reverse proxy would work. Its cert is self-signed (SAN
+   localhost/127.0.0.1 only), so first visit per browser shows a warning.
+8. Alexa: HACS "Alexa Media Player" was being downloaded by the user (needs HA restart + the user's
+   own Amazon login). Pending after that: "humidity back below 55% → Ac off" automation and Alexa
+   announcements on both humidity automations.
