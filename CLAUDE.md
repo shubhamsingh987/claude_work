@@ -579,3 +579,11 @@ noise, not the actual cause. The theme works fine applied per-user via Profile �
 8. Alexa: HACS "Alexa Media Player" was being downloaded by the user (needs HA restart + the user's
    own Amazon login). Pending after that: "humidity back below 55% → Ac off" automation and Alexa
    announcements on both humidity automations.
+
+## printbox/ — plug-in AirPrint box for old USB printers (prototype, 2026-09-23)
+
+Product idea the user may sell: a Pi Zero 2 W that makes an old USB printer show up as AirPrint,
+fully offline, no app. Setup = comitup hotspot `PrintBox-xxxx` + captive portal (user picked this
+over WPS); drivers are all preinstalled and auto-matched by USB device ID on plug-in. Build with
+`sudo bash printbox/install.sh` on Raspberry Pi OS Lite Bookworm. **Not yet tested on hardware** —
+see `printbox/README.md` "Known gaps".

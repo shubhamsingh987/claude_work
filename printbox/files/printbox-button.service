@@ -1,0 +1,10 @@
+[Unit]
+Description=PrintBox: hold-10s factory reset button
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/sbin/printbox-button.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

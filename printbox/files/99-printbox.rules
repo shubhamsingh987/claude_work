@@ -1,0 +1,2 @@
+# USB printer-class interface (07) appears -> run the auto-add service.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ATTR{bInterfaceClass}=="07", TAG+="systemd", ENV{SYSTEMD_WANTS}+="printbox-autoadd.service"
