@@ -223,7 +223,15 @@ power backup. Case design lives in `pi5-ups-lcd-case/enclosure.scad`. Session lo
 2026-09-14 through 2026-09-22; picks up mid-task on Qingping BLE troubleshooting (unresolved).
 
 ### How to reach it
-SSH as `hassio@homeassistant.local`, password is the **weak literal default word for this
+**Use `ssh haos "<command>"` — key-based, no password, working since 2026-09-23.** Local
+`~/.ssh/config` has `Host haos` → `HostName homeassistant.local` (mDNS, not the IP — user's
+preference), `User hassio`, `IdentityFile ~/.ssh/id_ed25519_haos`, `IdentitiesOnly yes`. The user
+added the `claude-code-haos` public key to the add-on's `authorized_keys` themselves (security
+setting — their click, not the agent's). `sudo -n docker ...` works over it exactly as before.
+Right after an add-on restart port 22 briefly refuses connections — retry for ~30s.
+The paramiko + password route below is now only a fallback.
+
+(Fallback) SSH as `hassio@homeassistant.local`, password is the **weak literal default word for this
 add-on's own factory setting** (⚠️ flagged to user, not yet rotated — consider prompting to
 change it; deliberately not spelled out here since this file is committed to git — check prior
 session context or ask the user if it's needed). This is the community "Advanced SSH & Web
@@ -497,7 +505,9 @@ noise, not the actual cause. The theme works fine applied per-user via Profile �
 4. If still wanted: build the "wallpaper on kiosk idle" feature (`browser_mod` + automation).
 5. Tuya IR AC control via `tuya-smart-ir-ac` (needs user-created Tuya IoT project); assign areas to
    Tuya devices once the user says which rooms they're in.
-6. **Key-based SSH to HAOS — in progress, NOT working yet (2026-09-23).** Local side is done:
+6. ~~Key-based SSH to HAOS~~ — **done 2026-09-23**, `ssh haos` works (see "How to reach it").
+   Follow-up worth suggesting: change or blank the add-on's weak default password now that the
+   key works. History of how it got here:
    `~/.ssh/config` has `Host haos` (192.168.1.131, user `hassio`, `IdentityFile ~/.ssh/id_ed25519_haos`).
    That key was deliberately generated so its variable part has no `l`/`1`/`I`/`O`/`0` — the first
    attempt (`id_ed25519_hapi`, `claude-code@hapi`) got hand-typed into the add-on config with `1`→`l`
