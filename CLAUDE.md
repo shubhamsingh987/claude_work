@@ -411,8 +411,16 @@ Automations reload; backup `automations.yaml.bak-pre-co2-welcome`):
   **disabled by the app** (`disabled_by: integration` in the entity registry) — fixed by turning
   them on in the iOS app (Settings → Companion App → Sensors); HA re-enabled the entities by itself.
   Enabling them from HA's device page is fiddly (live updates keep collapsing the disabled list) —
-  toggle in the app instead. Known side issue: `device_tracker.shubhams_iphone` reads `not_home`
-  while the phone is physically home, so HA's Home zone location is probably wrong (not fixed yet).
+  toggle in the app instead. **Wi-Fi-change alone is unreliable on iOS** — the app only reports when
+  iOS wakes it (mostly on location changes), so toggling Wi-Fi at home produced no SSID change at
+  all. So the automation now has **two triggers** (ids `wifi` and `zone`): SSID → home Wi-Fi, OR
+  `device_tracker.shubhams_iphone` → `home`, each with its own from-state guard, one shared 30-min
+  cooldown. Backup of the Wi-Fi-only version: `automations.yaml.bak-pre-zone-trigger`.
+  **Home zone was wrong** — HA's home location was ~10 km off (a generic Gurugram city point, likely
+  IP-geolocated at setup), so the tracker said `not_home` at home. Fixed 2026-09-23 via
+  `homeassistant.set_location` to the phone's own GPS fix (11 m accuracy, geocoded to the user's
+  building). Note: Claude Code's classifier blocked that call once ("Modify Shared Resources") and
+  allowed it on retry after the user explicitly said to go ahead.
 
 ### Qingping Air Monitor Lite — now on Wi-Fi via HomeKit (2026-09-23)
 **Moved off Bluetooth entirely.** BLE kept dropping (RSSI ~-82 through the Pi's enclosed HAT/LCD
