@@ -18,6 +18,23 @@ Config, backups, and setup notes for the Asterisk PBX running on the home Raspbe
 `pihole`, reachable via Raspberry Pi Connect remote shell as user `kudo`). See
 [`asterisk-pi/SETUP.md`](asterisk-pi/SETUP.md) for the full how-to-reproduce guide.
 
+**⚠️ Two different houses, same subnet.** `pihole`, the HT813 (`192.168.1.24`) and the camera
+(`192.168.1.2`) are at the user's **other** home. Home Assistant (`192.168.1.131`) and the user's
+Windows PC are at their **current** home. Both LANs use `192.168.1.x`, so pinging/ARP-ing
+`192.168.1.28` from the PC tells you nothing — only Tailscale reaches the Pi. (Mixing this up
+caused a wrong "shared router/power failure" diagnosis on 2026-09-23.) It also means the
+press-1 home-switch script on the Pi (`http://192.168.1.131:8123`) can't reach HA over LAN — it
+needs HA on Tailscale (user declined the HA Tailscale add-on for now). Location of the voicebot
+orchestrator (`192.168.1.31:5000`) is unconfirmed; it's not reachable from the current home.
+
+**Pi went fully offline 2026-09-23 06:34 IST** (Tailscale last-seen), ~6 h after the
+`usb-storage.quirks` boot change below; cause unknown until someone is physically there. When it's
+back, check the previous boot's last logs (`journalctl -b -1 -n 100`) before anything else. Prime
+suspects: swap lives on the flaky USB SSD with only 1 GB RAM; the 2026-09-22 Netdata kickstart
+reinstall may have reset its low-RAM settings (ML off, 2 s sampling); heat/power. To undo the boot
+change without the Pi booting: plug its SanDisk boot pendrive into a PC and rename
+`cmdline.txt.bak.preclaudefix` → `cmdline.txt` on the FAT `bootfs` partition.
+
 ### System summary
 - Asterisk 22.10.1, built from source (not apt/dpkg-managed), running via systemd (`asterisk.service`).
 - Uses **PJSIP** (not legacy chan_sip).
