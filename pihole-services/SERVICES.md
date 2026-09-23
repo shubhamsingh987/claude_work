@@ -11,12 +11,12 @@ also works if you're on the home network.
 | Filebrowser | `http://100.78.206.32:8090` | |
 | Cockpit (system admin panel) | `https://100.78.206.32:9090` | full server dashboard — CPU/disk/logs/services |
 | **Netdata** (monitoring dashboard) | `http://100.78.206.32:19999` | reinstalled 2026-09-22, includes live Asterisk PJSIP/channel stats — see `asterisk-pi/` |
-| MediaMTX (CCTV) — RTSP | `rtsp://100.78.206.32:8554` | |
-| MediaMTX (CCTV) — HLS | `http://100.78.206.32:8888` | browser-playable |
-| MediaMTX (CCTV) — WebRTC | `http://100.78.206.32:8889` | |
-| MediaMTX (CCTV) — API | `http://100.78.206.32:9996` | |
+| MediaMTX (CCTV) — RTSP | `rtsp://100.78.206.32:8554/cam1` | for VLC etc. |
+| MediaMTX (CCTV) — HLS | `http://100.78.206.32:8888/cam1/` | browser-playable live view |
+| MediaMTX (CCTV) — WebRTC | `http://100.78.206.32:8889/cam1/` | lowest-latency live view |
+| MediaMTX (CCTV) — Playback | `http://100.78.206.32:9996/list?path=cam1` | recorded footage (lists segments). Note: 9996 is MediaMTX's *playback* server, not its API — the API isn't enabled (`api:` not set in `mediamtx.yml`). Root paths (`/`) on all MediaMTX ports return 404 by design; use the stream paths above. |
 | Asterisk (phone/voicebot) | no web UI — SIP only, see `asterisk-pi/` | |
-| CUPS (printing) | `http://100.78.206.32:631` | socket-activated — see note below |
+| CUPS (printing) | `http://100.78.206.32:631` | see note below |
 | Samba (file shares) | `\\100.78.206.32\` | ports 445/139 |
 | SSH | `ssh pihole` | see root `CLAUDE.md` for setup |
 
@@ -25,9 +25,13 @@ via socket-activation turned out incomplete — see below). Two real issues, bot
 1. It's `systemd`-socket-activated with `IdleExitTimeout 60` in `cupsd.conf` — it would start on
    first touch, then **exit again after just 60 seconds idle**, and since `cups.socket` only
    watches the local Unix socket (not TCP 631), a browser hitting `:631` directly could never
-   wake it back up — only a local `lp*` command could. Fixed: set `IdleExitTimeout 0` and
-   `sudo systemctl enable --now cups.service` so it runs persistently instead of relying on lazy
-   activation. Verified alive continuously past the old 60s window.
+   wake it back up — only a local `lp*` command could. Fixed: set `IdleExitTimeout 0`, and made
+   it start at boot via `sudo systemctl add-wants multi-user.target cups.service`. **Gotcha**: a
+   plain `systemctl enable cups` does NOT make it start at boot here — its unit file says
+   `WantedBy=printer.target`, which only activates when udev sees a physical printer. With no
+   printer attached it never starts. (This was initially gotten wrong — `enable --now` looked
+   like it worked because `--now` started it immediately, then it was dead again after the next
+   reboot.) Verified pulled in by `multi-user.target` via `systemctl list-dependencies`.
 2. Its access control (`<Location>` blocks in `cupsd.conf`) only had `Allow @LOCAL`, which
    doesn't cover Tailscale's virtual interface — every other service is Tailscale-reachable,
    CUPS wasn't. Fixed: added `Allow 100.64.0.0/10` (Tailscale's CGNAT range) to all four
@@ -38,33 +42,59 @@ via socket-activation turned out incomplete — see below). Two real issues, bot
 No printers are configured yet (`lpstat -p` → "No destinations added") — that's just nobody
 having added one, not a fault.
 
-## CCTV drive — disconnected again (2026-09-23)
+## CCTV drive disconnects — root cause found and fixed (2026-09-23)
 
-The external drive at `/mnt/hdd` (label `cctv`) has **physically dropped off the USB bus a
-second time** (first was 2026-09-04, see `asterisk-pi/hdd-watchdog/README.md`) — confirmed via
-`lsblk`/`lsusb`: no `sdb` device, no JMicron USB bridge chip present at all. This took both
-**MediaMTX** (all 4 ports: RTSP/HLS/WebRTC/API) and **Filebrowser** (its entire serving root IS
-`/mnt/hdd`) down at the same moment (23:52:28 IST) — confirmed via kernel log: `I/O error`,
-`EXT4-fs ... Remounting filesystem read-only`, `USB disconnect, device number 6`.
+**Symptom**: the external SSD at `/mnt/hdd` (label `cctv`) dropped off the USB bus twice — first
+2026-09-04, then again 2026-09-22 23:52 IST — taking down **MediaMTX** and **Filebrowser** (its
+entire serving root IS `/mnt/hdd`) each time. `lsblk`/`lsusb` showed no `sdb` and no JMicron
+bridge, so it *looked* like a physical disconnect.
 
-**`hdd-watchdog` worked exactly as designed** — detected the unhealthy mount within 5 minutes,
-cleanly stopped both dependent services, attempted unmount+fsck, correctly identified the device
-is genuinely gone (not just a filesystem error this time), and backed off rather than looping —
-this is its documented limitation (physical disconnection needs a human), not a bug. It's been
-retrying every 5 minutes since, logging each attempt (`journalctl -t hdd-watchdog`), and will
-recover both services automatically the moment the drive physically reconnects.
+**It wasn't the drive, and it wasn't a loose cable.** Root cause is a known Raspberry Pi 3 USB
+limitation (this Pi is a Pi 3 — it uses the old `dwc_otg` USB controller, not the xHCI controller
+on Pi 4/5):
+- The enclosure is a generic JMicron JMS583 USB→NVMe bridge (`152d:0583`, reports itself as
+  "YzWy Disk Device" / "jack88888") that wants to use **UAS** (USB Attached SCSI).
+- The kernel logged at every boot: *"The driver for the USB controller dwc_otg_hcd does not
+  support scatter-gather which is required by the UAS driver"* — Pi 3's controller can't do UAS.
+- Just before the 2026-09-22 disconnect: `dwc_otg_hcd_urb_dequeue: Timed out waiting for FSM NP
+  transfer to complete` → `usb 1-1.4: reset` → ~4 min later `USB disconnect`. This happened under
+  sustained write load (minutes of MediaMTX "reader is too slow, discarding frames" warnings
+  beforehand). On Pi 3, all USB ports **and** Ethernet share one internal hub/USB 2.0 bus.
+- Proof it was the controller, not the hardware: a plain reboot re-enumerated the drive
+  immediately, and boot-time fsck replayed the journal and reported the filesystem `clean`.
 
-**This needs your physical attention** — reseat the drive enclosure's USB cable (and check its
-power connection if it's externally powered) at the Pi. Once reconnected, no action needed;
-the watchdog picks it up within 5 minutes and brings MediaMTX + Filebrowser back on its own.
+**Fix applied**: added `usb-storage.quirks=152d:0583:u` to `/boot/firmware/cmdline.txt` (the
+single-line kernel command line — edited with an exact-byte `diff` check before rebooting; backup
+at `/boot/firmware/cmdline.txt.bak.preclaudefix` and `~/cmdline.txt.bak.preclaudefix`). The `u`
+flag tells the kernel to never attempt UAS with this device and use plain `usb-storage` (BOT)
+instead. Confirmed after reboot: `/proc/cmdline` contains it, and `dmesg` shows *"UAS is ignored
+for this device, using usb-storage instead"* / *"Quirks match for vid 152d pid 0583"* — the old
+scatter-gather error is gone.
 
-The watchdog script (`asterisk-pi/hdd-watchdog/hdd-watchdog.sh`) was extended today to also
-stop/start `filebrowser` alongside `mediamtx` (previously only handled `mediamtx`) — added
-because this exact incident revealed the gap.
+**Speed cost**: expected to be negligible here. Pi 3 is USB 2.0-only (~35–40 MB/s ceiling either
+way), and one camera writing sequential 15-minute segments is exactly the low-queue-depth workload
+where UAS vs. BOT barely differs. UAS was never actually working on this Pi anyway.
 
-**Everything else, re-verified 2026-09-23**: Pi-hole, Homebridge, Netdata, Samba, SSH, Cockpit
-(a `curl` test without `-k` for its self-signed cert falsely reported it down — actually fine,
-confirmed `HTTP 200` from LAN and Tailscale once tested properly) all genuinely healthy.
+**If it disconnects again anyway**: a reboot has proven sufficient to bring it back (no physical
+reseat needed). The real long-term fix is a Pi 4/5 (proper xHCI USB, dedicated bandwidth). Not
+yet done: verifying stability over days of recording with the quirk in place — watch
+`journalctl -t hdd-watchdog` and `dmesg | grep -i 'usb 1-1.4'` for resets.
+
+**`hdd-watchdog` behaved correctly throughout** — detected the dead mount within 5 minutes,
+stopped the dependent services, correctly recognized the device was absent, and backed off to
+retry every 5 minutes rather than looping. It was extended during this incident to also manage
+`filebrowser` (previously `mediamtx`-only).
+
+**Side finding**: the Pi also rebooted itself at 2026-09-22 14:53 IST (`who -b`), which wasn't
+noticed at the time and is not explained by anything done in this session. Unrelated to the
+23:52 disconnect (9 hours apart), but worth watching for — check `journalctl --list-boots` if
+uptime looks unexpectedly short.
+
+**All services re-verified after the fix (2026-09-23, from both LAN and Tailscale)**: Pi-hole,
+Homebridge, Filebrowser, Cockpit, Netdata, CUPS, MediaMTX (live HLS/WebRTC `cam1` streams and
+the playback server all `HTTP 200`; RTSP port open), Samba, SSH — all healthy. Recording
+resumed (new segments landing in `/mnt/hdd/recordings/cam1/`), Asterisk's `pbx_ata` endpoint
+`Avail`. (Cockpit uses a self-signed cert — test with `curl -k`, otherwise it falsely looks down.)
 
 ## Auto-restart hardening (2026-09-22)
 

@@ -165,6 +165,17 @@ NOT handle (physical disconnection, genuinely failing hardware, data lost during
 window). `smartctl` and `ffmpeg` were also installed on the Pi this session (useful for drive
 health checks and pulling live/recorded frames going forward).
 
+**Root cause found 2026-09-23 (after a second disconnect)**: not the SSD and not a cable — this Pi
+is a **Pi 3** (`dwc_otg` USB controller), which can't do UAS; the JMicron JMS583 enclosure
+(`152d:0583`) kept trying, and the controller hung under sustained write load
+(`dwc_otg_hcd_urb_dequeue: Timed out waiting for FSM NP transfer` → reset → disconnect). A plain
+reboot re-enumerated the drive and fsck reported it clean. **Fix**: `usb-storage.quirks=152d:0583:u`
+appended to `/boot/firmware/cmdline.txt` (forces non-UAS mode; negligible speed cost on USB 2.0),
+verified in `dmesg` after reboot. CUPS also needed `systemctl add-wants multi-user.target
+cups.service` — plain `enable` only hooks it to `printer.target`, which never fires without a
+printer attached. Full writeup: `pihole-services/SERVICES.md`. Also noticed: the Pi rebooted
+itself at 2026-09-22 14:53 with no known cause — unexplained, keep an eye on it.
+
 ### Netdata + Asterisk metrics (2026-09-22)
 
 Researched FreePBX-style admin GUIs as an alternative way to get visibility into Asterisk (see

@@ -49,9 +49,14 @@ journalctl -t hdd-watchdog -n 50 --no-pager
 
 ## What it does NOT handle
 
-- **Physical disconnection**: if the drive is actually gone from the USB bus (not just a
-  filesystem error), the script logs it and backs off — it can't make a missing device appear.
-  Check `lsusb` / `lsblk` by hand in that case.
+- **Device gone from the USB bus**: if the drive disappears from `lsusb`/`lsblk` entirely (not
+  just a filesystem error), the script logs it and backs off — it can't make a missing device
+  appear. **On this Pi, that has so far meant a wedged USB controller, not a loose cable**: the
+  Pi 3's `dwc_otg` controller can't do UAS and hung under write load; a plain `sudo reboot`
+  brought the drive straight back. A kernel quirk disabling UAS for this enclosure was applied
+  on 2026-09-23 to stop it happening — see `pihole-services/SERVICES.md`, "CCTV drive
+  disconnects". The watchdog deliberately does NOT reboot the Pi itself (that would also take
+  down DNS, the phone line, etc.) — that's a human decision.
 - **Failing hardware**: repeated recoveries are a sign the drive or its enclosure/cable is
   dying, not that the watchdog is broken. Worth running `smartctl -a /dev/sdb` (installed on
   the Pi as of 2026-09-22) if this fires more than once or twice.
