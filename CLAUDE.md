@@ -416,6 +416,12 @@ Automations reload; backup `automations.yaml.bak-pre-co2-welcome`):
   all. So the automation now has **two triggers** (ids `wifi` and `zone`): SSID → home Wi-Fi, OR
   `device_tracker.shubhams_iphone` → `home`, each with its own from-state guard, one shared 30-min
   cooldown. Backup of the Wi-Fi-only version: `automations.yaml.bak-pre-zone-trigger`.
+  **Superseded 2026-09-23 by an iPhone Shortcut** (user's choice): this automation is now turned
+  **off** (`automation.turn_off`, kept in `automations.yaml`, not deleted). Instead
+  `script.welcome_home` ("Welcome home announcement", in `/homeassistant/scripts.yaml` — was empty
+  before; backup `scripts.yaml.bak-pre-welcome`) does the Alexa TTS, and the user runs it from an iOS
+  Shortcuts personal automation (Wi-Fi join `Tripleplay_A236 4th floor` → Home Assistant "Run Script").
+  Don't re-enable the automation without asking — it would double-greet.
   **Home zone was wrong** — HA's home location was ~10 km off (a generic Gurugram city point, likely
   IP-geolocated at setup), so the tracker said `not_home` at home. Fixed 2026-09-23 via
   `homeassistant.set_location` to the phone's own GPS fix (11 m accuracy, geocoded to the user's
