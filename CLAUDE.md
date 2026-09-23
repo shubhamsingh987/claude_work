@@ -387,7 +387,27 @@ HACS custom integration `alandtse/alexa_media_player` (v5.16.1). 9 `media_player
 Amazon login popup** that kills the Claude browser pane — the Amazon login step must be done in the
 user's own normal browser, and it's their credentials anyway (never enter them). Local URL set to
 `http://homeassistant.local:8123` (user wants mDNS everywhere, not the IP). An empty-looking config
-form just means it's still loading — wait a few seconds.
+form just means it's still loading — wait a few seconds. Logs show a recurring
+`ValueError: Config entry ... for alexa_media.media_player has already been setup!` — harmless
+(re-login quirk); TTS confirmed working right after it.
+
+**Alexa automations** (all speak on `media_player.shubham_s_3rd_echo_dot`, `type: tts`; added
+2026-09-23 by appending to `/homeassistant/automations.yaml` over SSH with `sudo tee -a`, validated
+with `yaml.safe_load` inside the `homeassistant` container, then Developer Tools → YAML →
+Automations reload; backup `automations.yaml.bak-pre-co2-welcome`):
+- `automation.high_co2_alexa_says_open_the_doors` (id `1790200000101`) — Qingping CO2 above
+  **1200 ppm** for 5 min → "Warning. High carbon dioxide detected, N parts per million. Please open
+  the doors." Threshold is a guess; user may want 1000.
+- `automation.welcome_home_alexa_greets_shubham_on_home_wi_fi` (id `1790200000102`) — state trigger
+  on `sensor.shubhams_iphone_ssid`; fires when it changes *to* something matching `Tripleplay_A236`
+  (home SSID is `Tripleplay_A236 4th floor`, 2.4 GHz — read from the Pi's own `iw dev wlan0 link`)
+  from a non-home, non-`unavailable` value; 30-min cooldown via `this.attributes.last_triggered`.
+  Says "Welcome back home, Master Shubham." Action path verified (automation.trigger with
+  skip_condition — user heard it). **Blocked on the phone side**: the iPhone Companion app has
+  never reported an SSID (always `unavailable`), location permission is only "When in use", and the
+  iOS app's refresh token was last used ~2 months ago. Needs Location = Always + Precise and the app
+  re-connected to `http://homeassistant.local:8123`; then confirm `sensor.shubhams_iphone_ssid`
+  shows the home SSID.
 
 ### Qingping Air Monitor Lite — now on Wi-Fi via HomeKit (2026-09-23)
 **Moved off Bluetooth entirely.** BLE kept dropping (RSSI ~-82 through the Pi's enclosed HAT/LCD
