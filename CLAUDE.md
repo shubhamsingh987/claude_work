@@ -365,6 +365,10 @@ the user "couldn't see any toggles". Added `switch.diwali_lights_socket_1` and
   confirmed working by the user. (`scene.ac_on_door_open` / `scene.ac_off_on_door_close` showed
   `unavailable` after the reload — possibly Smart Life *automations* rather than tap-to-run; not
   investigated.) To add more AC presets: create the scene in Smart Life, then reload the Tuya entry.
+- **Thresholds changed 2026-09-23 to on above 70% / off below 60%** (user request; alias now
+  "Humidity AC control - on above 70%, off below 60%", entity id still
+  `automation.humidity_above_65_ac_on`; backup `automations.yaml.bak-pre-70-60`). The 60/50 values
+  in the description just below are the previous version.
 - **Automation "Humidity AC control - on above 60%, off below 50%"** (id `1790102634665`, originally
   "Humidity above 65% - AC on", reworked 2026-09-23): two numeric_state triggers on
   `sensor.qingping_air_monitor_lite_humidity` (HomeKit/Wi-Fi entity — was the old BLE
