@@ -403,11 +403,16 @@ Automations reload; backup `automations.yaml.bak-pre-co2-welcome`):
   (home SSID is `Tripleplay_A236 4th floor`, 2.4 GHz — read from the Pi's own `iw dev wlan0 link`)
   from a non-home, non-`unavailable` value; 30-min cooldown via `this.attributes.last_triggered`.
   Says "Welcome back home, Master Shubham." Action path verified (automation.trigger with
-  skip_condition — user heard it). **Blocked on the phone side**: the iPhone Companion app has
-  never reported an SSID (always `unavailable`), location permission is only "When in use", and the
-  iOS app's refresh token was last used ~2 months ago. Needs Location = Always + Precise and the app
-  re-connected to `http://homeassistant.local:8123`; then confirm `sensor.shubhams_iphone_ssid`
-  shows the home SSID.
+  skip_condition — user heard it). **Working end-to-end as of 2026-09-23 12:52** — getting the
+  phone side going took three fixes: (1) iOS Location permission → **Always** (was "When in use";
+  iOS won't let the app read the SSID in the background otherwise), (2) re-signing into the
+  Companion app (it hadn't talked to HA in ~2 months; this *re-registered* the phone as a new
+  `mobile_app` entry), (3) the re-registration came in with SSID/BSSID/Connection Type reported as
+  **disabled by the app** (`disabled_by: integration` in the entity registry) — fixed by turning
+  them on in the iOS app (Settings → Companion App → Sensors); HA re-enabled the entities by itself.
+  Enabling them from HA's device page is fiddly (live updates keep collapsing the disabled list) —
+  toggle in the app instead. Known side issue: `device_tracker.shubhams_iphone` reads `not_home`
+  while the phone is physically home, so HA's Home zone location is probably wrong (not fixed yet).
 
 ### Qingping Air Monitor Lite — now on Wi-Fi via HomeKit (2026-09-23)
 **Moved off Bluetooth entirely.** BLE kept dropping (RSSI ~-82 through the Pi's enclosed HAT/LCD
