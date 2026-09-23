@@ -519,6 +519,20 @@ Qingping-specific** — confirmed the whole Bluetooth adapter has stopped active
      for a few seconds, see if devices show up — this isolates "BlueZ itself won't discover" from
      "HA just isn't asking it to."
 
+### Markets dashboard (crypto + stocks), 2026-09-23
+Sidebar **Markets** (`/dashboard-markets`, YAML mode, `dashboards/markets.yaml`). Prices come from
+built-in `rest:` sensors in `/homeassistant/markets_rest.yaml`, not HACS:
+- **CoinGecko** `simple/price`: BTC/ETH/SOL in INR plus 24 h change. One call every 3 min.
+- **Yahoo v8 chart** (`query1.finance.yahoo.com/v8/finance/chart/<sym>`, needs a User-Agent
+  header): NIFTY 50, SENSEX, S&P 500, USD/INR, RELIANCE/TCS/INFY/HDFCBANK.NS. Every 5 min, with
+  day change computed from `chartPreviousClose`.
+
+Entities are `sensor.<name>_price` / `_change` (crypto: `_change_24h`). To change tickers, edit the
+lists in `haos-pi5/gen_markets.py`, regenerate, copy both files back, then restart HA (new REST
+resources need a restart). The Markets tickers were my defaults, not the user's picks, so swap
+them when the user names theirs. Backup `configuration.yaml.bak-pre-markets`. The auto-mode
+classifier blocked `docker restart homeassistant` ("Auto-Mode Bypass"), so the user restarts.
+
 ### Cyberpunk theme (resolved, informational — read before touching `frontend:` config again)
 Installed `flejz/hass-cyberpunk-2077-theme` to `/config/themes/cyberpunk-2077.yaml` (`curl`'d
 via the web terminal). **`frontend: default_theme: <name>` in `configuration.yaml` is NOT a

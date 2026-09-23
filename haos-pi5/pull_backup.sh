@@ -4,16 +4,19 @@
 # Needs the `haos` SSH alias (see CLAUDE.md -> "How to reach it").
 set -euo pipefail
 cd "$(dirname "$0")"
-mkdir -p config/themes host
+mkdir -p config/themes config/dashboards host
 
 R() { ssh -o BatchMode=yes haos "$@"; }
 
 echo "config files"
-for f in configuration.yaml automations.yaml scripts.yaml scenes.yaml; do
+for f in configuration.yaml automations.yaml scripts.yaml scenes.yaml markets_rest.yaml; do
   R "sudo -n cat /homeassistant/$f" > "config/$f"
 done
 for t in $(R "sudo -n ls /homeassistant/themes"); do
   R "sudo -n cat /homeassistant/themes/$t" > "config/themes/$t"
+done
+for d in $(R "sudo -n ls /homeassistant/dashboards"); do
+  R "sudo -n cat /homeassistant/dashboards/$d" > "config/dashboards/$d"
 done
 
 echo "host-level tweaks"

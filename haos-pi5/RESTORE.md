@@ -9,6 +9,7 @@ Background and every gotcha in detail: repo-root `CLAUDE.md`, section `pi5-ups-l
 | Path | What it is |
 |---|---|
 | `config/configuration.yaml`, `automations.yaml`, `scripts.yaml`, `scenes.yaml` | Copies of `/config/*.yaml` |
+| `config/markets_rest.yaml`, `config/dashboards/markets.yaml` | Markets dashboard: REST price sensors (CoinGecko + Yahoo, no API keys) and its YAML-mode dashboard. Regenerate both with `python gen_markets.py <outdir>` after editing the ticker lists in `gen_markets.py` |
 | `config/themes/cyberpunk-2077.yaml` | Theme (from `flejz/hass-cyberpunk-2077-theme`), applied per user profile |
 | `host/boot-config.txt` | `/mnt/boot/config.txt` — I2C on, SPI on, ads7846 touch overlay (`xohms=150`) |
 | `host/modules-load.d.txt` | `/etc/modules-load.d/i2c-dev.conf` — makes `/dev/i2c-1` exist after every boot |
@@ -76,10 +77,11 @@ Install HACS, then add each repo in `INVENTORY.md` → "HACS repositories instal
 
 ### 5. Config files
 ```bash
-for f in configuration.yaml automations.yaml scripts.yaml scenes.yaml; do
+for f in configuration.yaml automations.yaml scripts.yaml scenes.yaml markets_rest.yaml; do
   ssh haos "sudo -n tee /homeassistant/$f >/dev/null" < config/$f
 done
-ssh haos "sudo -n mkdir -p /homeassistant/themes"
+ssh haos "sudo -n mkdir -p /homeassistant/themes /homeassistant/dashboards"
+ssh haos "sudo -n tee /homeassistant/dashboards/markets.yaml >/dev/null" < config/dashboards/markets.yaml
 ssh haos "sudo -n tee /homeassistant/themes/cyberpunk-2077.yaml >/dev/null" < config/themes/cyberpunk-2077.yaml
 ```
 Developer Tools → YAML → **Check configuration**, then **Restart**.

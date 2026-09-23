@@ -16,3 +16,15 @@ ingress:
     icon: mdi:server
     require_admin: true
     url: http://192.168.1.28:9090$http_x_ingress_path
+
+# Crypto + stock prices (CoinGecko / Yahoo, no API keys) for the Markets dashboard
+rest: !include markets_rest.yaml
+
+lovelace:
+  dashboards:
+    dashboard-markets:
+      mode: yaml
+      title: Markets
+      icon: mdi:finance
+      show_in_sidebar: true
+      filename: dashboards/markets.yaml

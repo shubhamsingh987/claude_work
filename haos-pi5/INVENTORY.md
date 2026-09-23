@@ -83,7 +83,7 @@ waveshare_ups_hat_d 0.1.0
 ```
 total 330764
 drwxr-xr-x    2 root     root          4096 Sep 23 10:37 .
-drwxr-xr-x    1 root     root          4096 Sep 23 10:45 ..
+drwxr-xr-x    1 root     root          4096 Sep 23 14:13 ..
 -rw-r--r--    1 root     root      21022720 Jul 28 18:44 Home_Assistant_Core_2026.7.2_2026-07-29_00.14_20258251.tar
 -rw-r--r--    1 root     root     317665280 Sep 23 10:37 automatic_backup_2026_9_3_2026-09-23_16.07_22616998.tar
 ```
