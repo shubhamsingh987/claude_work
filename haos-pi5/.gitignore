@@ -1,0 +1,8 @@
+# Full HA backups and anything secret must never land in git (they hold auth tokens,
+# Amazon/Tuya sessions, add-on passwords). Keep those in OneDrive outside this repo.
+*.tar
+*.tar.gz
+secrets.yaml
+*.secret
+*options.json
+.storage/

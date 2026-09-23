@@ -1,0 +1,14 @@
+welcome_home:
+  alias: Welcome home announcement
+  description: >-
+    Alexa (shubham's 3rd Echo Dot) says "Welcome back home, Master Shubham."
+    Run from an iPhone Shortcut (Home Assistant app -> Run Script) when joining home Wi-Fi.
+  icon: mdi:home-heart
+  mode: single
+  sequence:
+    - action: notify.alexa_media
+      data:
+        message: Welcome back home, Master Shubham.
+        target: media_player.shubham_s_3rd_echo_dot
+        data:
+          type: tts

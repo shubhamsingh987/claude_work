@@ -237,7 +237,16 @@ A **different** Raspberry Pi from `pihole` above: runs Home Assistant OS, hostna
 `homeassistant.local` / LAN IP `192.168.1.131`, with a Waveshare 3.5" touchscreen (resistive,
 ads7846) as a wall-mounted kiosk display, and a Waveshare UPS HAT (D) with a 21700 battery for
 power backup. Case design lives in `pi5-ups-lcd-case/enclosure.scad`. Session log covers
-2026-09-14 through 2026-09-22; picks up mid-task on Qingping BLE troubleshooting (unresolved).
+2026-09-14 through 2026-09-23.
+
+**Config backup + restore guide: [`haos-pi5/`](haos-pi5/)** (added 2026-09-23). Snapshot of
+`/config` YAML (automations, scripts, configuration, theme), host-level tweaks (`config.txt`,
+`modules-load.d`), and an inventory (add-ons, integrations, HACS repos with versions). Step-by-step
+rebuild in [`haos-pi5/RESTORE.md`](haos-pi5/RESTORE.md). Refresh with `bash haos-pi5/pull_backup.sh`
+after changing anything on the Pi, then commit. Secrets (`.storage/`, `secrets.yaml`, add-on
+`options.json`, full backup `.tar`s) are deliberately excluded and `.gitignore`d. Full HA backups
+go to OneDrive outside the repo. **The only full backup on the Pi is from 2026-07-29**: make a fresh
+one after big changes.
 
 ### How to reach it
 **Use `ssh haos "<command>"` — key-based, no password, working since 2026-09-23.** Local

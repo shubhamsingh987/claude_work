@@ -1,0 +1,18 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+ingress:
+  cockpit:
+    title: Cockpit
+    icon: mdi:server
+    require_admin: true
+    url: http://192.168.1.28:9090$http_x_ingress_path
