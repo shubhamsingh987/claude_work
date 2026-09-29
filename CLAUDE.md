@@ -231,6 +231,17 @@ Backup taken before the rebuild: `~/asterisk-backup-<timestamp>-prebuild/` on th
 full modules dir from before `res_chan_stats` was added) — rollback path if anything about this
 ever needs undoing (it hasn't). `statsd.conf.bak.preclaudefix` also sits next to the live config.
 
+## PiKVM (home PC remote console) — added 2026-09-29
+
+A **Pi Zero W** PiKVM (kvmd 3.48, 2021-era image, so no `kvmd-edidconf`) attached to a home PC.
+Tailscale `100.93.118.92` (`pikvm`), LAN `192.168.1.11` — on a different LAN from this Windows PC
+(different router MAC). Reach it with `ssh pikvm` (root, key `~/.ssh/id_ed25519_pikvm`, authorised
+by the user 2026-09-29). Tailscale SSH is NOT enabled on it — use plain ssh. Rootfs is read-only:
+`rw` before writing, `ro` after. No ATX wiring, so the PC can't be powered on remotely. kvmd's unix
+socket API needs auth, so check state directly: `v4l2-ctl -d /dev/kvmd-video --query-dv-timings`
+(HDMI signal) and `cat /sys/class/udc/*/state` (`configured` = USB HID seen by PC). On 2026-09-29:
+PiKVM healthy but "Link has been severed" + `not attached` → PC off/unplugged, needs someone there.
+
 ## pi5-ups-lcd-case/ — HAOS Pi 5 (Waveshare touchscreen + UPS HAT)
 
 A **different** Raspberry Pi from `pihole` above: runs Home Assistant OS, hostname
