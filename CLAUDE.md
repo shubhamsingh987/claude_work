@@ -594,6 +594,13 @@ noise, not the actual cause. The theme works fine applied per-user via Profile �
    own Amazon login). Pending after that: "humidity back below 55% → Ac off" automation and Alexa
    announcements on both humidity automations.
 
+## rig_preset/ — generated Guitar Rig 6 song presets
+
+Recipe-per-song generator for Guitar Rig 6 Pro `.ngrr` presets (`python rig_preset/build.py
+rig_preset/songs/<song>.py`). **Read [`rig_preset/README.md`](rig_preset/README.md) first** — it
+has the how-to and the import rules that took a whole session to find (GR6 needs Import, not a
+file copy; build only from the GR6-written template; tag every preset Artists → Claude).
+
 ## printbox/ — plug-in AirPrint box for old USB printers (prototype, 2026-09-23)
 
 Product idea the user may sell: a Pi Zero 2 W that makes an old USB printer show up as AirPrint,
