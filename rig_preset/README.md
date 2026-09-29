@@ -117,7 +117,7 @@ it round-trips GR's own files byte-exactly.
 
 ## Presets made so far
 
-All in `songs/`: Come As You Are and Something In The Way (Nirvana), Sadda Haq (Rockstar),
+All in `songs/`: Come As You Are, Something In The Way and Smells Like Teen Spirit (Nirvana), Sadda Haq (Rockstar),
 Pneuma and Fear Inoculum (Tool), For Whom The Bell Tolls (Metallica), Sweet Child O' Mine (GN'R).
 The user confirmed most of these imported in GR6, but from earlier versions of this tool (same
 chains and values; a few now draw their component blocks from different factory files).
