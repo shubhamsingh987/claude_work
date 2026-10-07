@@ -35,6 +35,38 @@ reinstall may have reset its low-RAM settings (ML off, 2 s sampling); heat/power
 change without the Pi booting: plug its SanDisk boot pendrive into a PC and rename
 `cmdline.txt.bak.preclaudefix` → `cmdline.txt` on the FAT `bootfs` partition.
 
+**Still offline as of 2026-10-07** (Tailscale: "last seen 14d ago"). User will check it in person.
+Note: on this PC, Tailscale can report `unexpected state: NoState` right after boot — wait ~30 s
+and retry before concluding anything about peers.
+
+**Why `hdd-watchdog` didn't save it**: it only watches the CCTV mount and runs *on* the Pi, so a
+whole-Pi freeze stops it too. It never could reboot the Pi (by design). What's missing:
+
+### TODO when `pihole` is back online (in this order)
+1. **Find the cause first**: `journalctl -b -1 -n 200 --no-pager` (last logs before the outage —
+   look for `dwc_otg`, `I/O error`, `oom`, `under-voltage`, or a clean shutdown) and
+   `journalctl --list-boots`. If journald isn't persistent, `/var/log/journal` won't exist —
+   create it so the next outage leaves evidence. If the logs point at the
+   `usb-storage.quirks` boot change, revert it (backup sits next to `cmdline.txt`).
+2. **Hardware watchdog** (catches full freezes): set `RuntimeWatchdogSec=15` (Pi 3's BCM2835 max
+   is ~15 s) and `RebootWatchdogSec=2min` in `/etc/systemd/system.conf`, then
+   `systemctl daemon-reexec`; verify `/dev/watchdog` exists and
+   `systemctl show -p RuntimeWatchdogUSec`. Off by default on Raspberry Pi OS.
+3. **Network watchdog** (catches "alive but Wi-Fi dead", which the hardware watchdog can't see):
+   a systemd timer that pings the gateway (and/or a Tailscale peer) every few minutes and reboots
+   after ~10 min of continuous failure. Keep it conservative so a router outage at that home
+   doesn't cause a reboot loop (e.g. one reboot per hour max).
+4. **Move swap off the flaky USB SSD**: swap (dphys-swapfile) lives on `/mnt/hdd`, and the Pi has
+   only 1 GB RAM — when the drive drops, swap goes with it and the whole system can freeze. Move
+   it to the boot pendrive or use zram only (`zram0` already exists).
+5. **Check Netdata's RAM settings** survived the 2026-09-22 kickstart reinstall (original setup:
+   ML off, 2 s update interval, cloud disabled). A default Netdata on a 1 GB Pi 3 is heavy.
+6. Re-run the full service sweep (see `pihole-services/SERVICES.md` — use `curl -k` for Cockpit
+   and `/cam1/` paths for MediaMTX), then update the docs.
+
+Also still open: the press-1 home-switch can't reach HA from the other home (HA needs Tailscale,
+user declined for now), and the orchestrator `192.168.1.31` location is unconfirmed.
+
 ### System summary
 - Asterisk 22.10.1, built from source (not apt/dpkg-managed), running via systemd (`asterisk.service`).
 - Uses **PJSIP** (not legacy chan_sip).
