@@ -1,13 +1,13 @@
 :root {
-  --bg: #151210;
-  --bg-alt: #1b1713;
-  --panel: #201b16;
-  --panel-border: #33291f;
+  --bg: #0f1411;
+  --bg-alt: #141a16;
+  --panel: #18201b;
+  --panel-border: #26332a;
   --text: #f1ece3;
   --text-dim: #a89f92;
   --text-faint: #756c60;
-  --accent: #f2a63e;
-  --accent-dim: #c98a2f;
+  --accent: #75a928;
+  --accent-dim: #5c8a1f;
   --whatsapp: #25d366;
   --whatsapp-dark: #1fb958;
   --radius: 14px;
@@ -43,7 +43,7 @@ a { color: inherit; }
   left: -9999px;
   top: 0;
   background: var(--accent);
-  color: #1a1410;
+  color: #0a1a0a;
   padding: 10px 16px;
   border-radius: 8px;
   z-index: 200;
@@ -88,7 +88,7 @@ a { color: inherit; }
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(21, 18, 16, 0.9);
+  background: rgba(15, 20, 17, 0.9);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--panel-border);
 }
@@ -268,7 +268,7 @@ a { color: inherit; }
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  background: rgba(242, 166, 62, 0.12);
+  background: rgba(117, 169, 40, 0.12);
   color: var(--accent);
   display: flex;
   align-items: center;
@@ -294,7 +294,7 @@ a { color: inherit; }
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(242, 166, 62, 0.1);
+  background: rgba(117, 169, 40, 0.1);
   color: var(--accent);
   display: flex;
   align-items: center;
@@ -502,3 +502,16 @@ a { color: inherit; }
   .specs-row { grid-template-columns: 1fr; gap: 4px; }
   .footer-row { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---------- Pi Verse brand + products ---------- */
+.brand-mark { font-family: Georgia, "Times New Roman", serif; font-size: 1.5rem; font-weight: 700; color: var(--accent); line-height: 1; display: inline-flex; align-items: center; }
+.product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 32px; }
+.product-card { display: flex; flex-direction: column; gap: 8px; padding: 24px; background: var(--panel); border: 1px solid var(--panel-border); border-radius: var(--radius); text-decoration: none; cursor: pointer; transition: border-color .15s, transform .15s; }
+.product-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.product-pi { font-family: Georgia, "Times New Roman", serif; font-size: 2.2rem; font-weight: 700; color: var(--accent); line-height: 1; }
+.product-card h3 { margin: 0; font-size: 1.15rem; }
+.product-card h3 em { font-style: normal; font-size: .7rem; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 8px; vertical-align: middle; }
+.product-card p { margin: 0; color: var(--text-dim); font-size: .92rem; flex: 1; }
+.product-price { color: var(--accent); font-weight: 600; font-size: .95rem; }
+@media (max-width: 900px) { .product-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .product-grid { grid-template-columns: 1fr; } }

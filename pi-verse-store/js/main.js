@@ -10,6 +10,9 @@
   }
 
   var links = [
+    { id: "prod-kvm", message: "Hi! I'm interested in PiKVM from Pi Verse. Can you share details and price?" },
+    { id: "prod-haos", message: "Hi! I'm interested in Pi HAOS from Pi Verse. Can you share details and price?" },
+    { id: "prod-print", message: "Hi! I'm interested in PrintBox from Pi Verse. When will it be available?" },
     { id: "nav-cta", message: DEFAULT_MESSAGE },
     { id: "hero-cta", message: "Hi! I'd like to order a PiWalkTalk pair (₹2999)." },
     { id: "price-cta", message: "Hi! I'd like to order a PiWalkTalk pair (₹2999). Is it in stock?" },

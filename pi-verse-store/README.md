@@ -1,4 +1,4 @@
-# PiWalkTalk — landing page / store
+# Pi Verse — landing page / store
 
 Single-page, static storefront for PiWalkTalk (₹2999/pair). No build step, no
 dependencies — plain HTML/CSS/JS. Ordering is WhatsApp-only: every CTA button
@@ -18,7 +18,7 @@ opens a chat to `+91 98846 25747` with a pre-filled message (see `js/main.js`).
 
 ```bash
 npm i -g vercel
-cd piwalktalk-store
+cd pi-verse-store
 vercel
 ```
 
