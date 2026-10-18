@@ -651,3 +651,94 @@ fully offline, no app. Setup = comitup hotspot `PrintBox-xxxx` + captive portal 
 over WPS); drivers are all preinstalled and auto-matched by USB device ID on plug-in. Build with
 `sudo bash printbox/install.sh` on Raspberry Pi OS Lite Bookworm. **Not yet tested on hardware** —
 see `printbox/README.md` "Known gaps".
+
+## pihole recovery plan (2026-10-18)
+
+Pi's OS pendrive (SanDisk Cruzer Blade, 14.6 GB) is **very likely failing hardware** — CRC read
+errors from Windows, then it dropped off USB mid-format. Likely the real cause of the outages and
+the "corrupted OS". Latest backup is `backups/pi-current.img` (8.2 GB, **30 Aug 2026**, predates all
+September changes) on the Pi's 111.8 GB ext4 SSD; copy on the PC at
+`C:\Users\singh\pi-restore\pi-current.img` (sha256 `b64e2468…022d8`). That SSD mounts on Windows via
+elevated `wsl --mount \.\PHYSICALDRIVE<n> --partition 1 --type ext4` (appears at
+`/mnt/host/wsl/pidrive` in the docker-desktop distro). Flash to a **new** pendrive (>=16 GB).
+Then reapply the Sept changes from this repo (usb-storage quirk, hdd-watchdog, Asterisk, Netdata).
+
+After the Pi boots, in this order:
+1. **Tailscale**: try the existing login; if it doesn't work, create a fresh node (`tailscale up`,
+   user signs in) and update the `pihole` SSH host IP in `~/.ssh/config`.
+2. **Checkmk** agent (+ local checks for asterisk/mediamtx/hdd mount).
+3. **Hardware watchdog** (`RuntimeWatchdogSec=15`, `RebootWatchdogSec=2min`) so it reboots itself.
+4. **Read-only root** on the pendrive (overlayfs via `raspi-config` Performance Options), with
+   `/var/log` and swap on the HDD so the pendrive sees no writes.
+5. **Swap + logs on HDD** (`/mnt/hdd`), keeping `nofail` so a missing drive can't block boot.
+
+### Recovery progress (2026-10-18)
+Restored from the 30 Aug image onto a new Cruzer pendrive; Pi back at LAN `192.168.1.28`, Tailscale
+`100.78.206.32` (old login still valid). SSH: new key `~/.ssh/id_ed25519_pihole`, passwordless sudo
+re-created. Reapplied: `usb-storage.quirks` (cmdline), HDD watchdog, restart overrides, hardware
+watchdog (`/etc/systemd/system.conf.d/watchdog.conf`, 15 s). Checkmk **agent** installed from the
+Checkmk GitHub repo (not in apt), socket bound to the Tailscale IP only, port 6556, plus a local check
+`/usr/lib/check_mk_agent/local/pihole_services` — no Checkmk server exists yet; add this host to one.
+**Still to do** (needs the SSD plugged in): swap + `/var/log` on `/mnt/hdd`, then the read-only
+overlay root last, then a weekly backup timer (copy off-box) and a spare pendrive clone. The SSD was
+not attached during this session; Netdata/cups/cockpit/filebrowser states were not rechecked.
+
+### Recovery progress, later 2026-10-18 (supersedes "Still to do" above)
+Pi was **reflashed from the 30 Aug image a second time** mid-session (journal restarted, all changes lost), so
+everything below was applied again. Reached at LAN `192.168.1.28` / Tailscale `100.78.206.32`
+(this PC's key `~/.ssh/id_ed25519_pihole`; Tailscale host key had to be re-trusted — fingerprint matched LAN).
+Applied: usb-storage quirk, hdd-watchdog, restart overrides, hardware watchdog 15 s, Checkmk agent (Tailscale
+socket :6556 + local check), `boot_delay=5` + `arm_freq=1000` in config.txt, swap file `/mnt/hdd/swapfile`
+(pri 10, behind zram), `/var/log` bind-mounted from `/mnt/hdd/varlog` (log2ram disabled), **read-only root**
+(`overlayroot=tmpfs` in cmdline.txt, `/boot/firmware` mounted `ro`) — takes effect on the next boot.
+- **Undo the read-only root without booting**: on a PC remove `overlayroot=tmpfs ` from the FAT `bootfs` partition's
+  `cmdline.txt` (backups `cmdline.txt.bak.preoverlay` / `.bak.preclaudefix` sit beside it). To change anything on the
+  Pi afterwards: `sudo raspi-config nonint disable_overlayfs` + `disable_bootro`, reboot, edit, re-enable.
+- **Lesson: never bind-mount `/var/lib/<service>` from the HDD.** With the HDD absent the bind fails and systemd then
+  refuses to start the service (`tailscaled` "Dependency failed") — a remote lockout. State dirs were reverted to the
+  pendrive; the overlay keeps the pendrive baseline, so only runtime changes since boot are lost. The same bind
+  trick for `/var/log` tolerated a missing HDD.
+- **Power**: Pi 3B Rev1.2 + JMicron SSD enclosure. `vcgencmd get_throttled` shows 0x50000 (past under-voltage,
+  4 s dip when the SSD spins up at boot, `usb 1-1.3: reset`). Full CPU + 800 MB HDD write stress: stable, 66 °C,
+  no new events. **A warm reboot hangs when the fan + HDD are attached** (cold boot with them unplugged works; plug
+  after boot) — USB devices keep power across a reboot. A powered USB hub for the SSD is the real fix. Until then a
+  watchdog reboot may leave the Pi down. Pendrive: the original Cruzer failed (CRC errors) — replaced.
+- Still to do: weekly off-box backup + spare pendrive clone; Checkmk server to point at; powered hub.
+
+### FINAL STATE 2026-10-18 evening — Pi now boots from the SSD (supersedes pendrive notes above)
+The Cruzer pendrive is retired. The SSD (JMicron 152d:0583, `/dev/sda`) was flashed from `pi-current.img` (30 Aug image)
+and repartitioned MBR: `sda1` bootfs 512M, `sda2` rootfs 12G, `sda3` `cctv` ext4 (~99G, mounted `/mnt/hdd`: recordings,
+files, swapfile, varlog, backups/pi-aug30.img). Disk id changed to `0x5ad10001` (the image's `892a1a0a` clashed with the
+pendrive). Single USB storage device => **warm reboots now work** (the earlier hangs were two boot devices, not power;
+throttle flag 0x0 on SSD-only boots). Applied offline from WSL (tiny Alpine distro `pitools`, files in
+`C:\Users\singh\pi-restore\`): SSH key + sudo, usb quirk, boot_delay=5/arm_freq=1000, hw watchdog 15 s, hdd-watchdog,
+restart overrides, Checkmk agent (Tailscale :6556) + local check, `/var/log` bind to `/mnt/hdd/varlog`, log2ram off.
+**Read-only root enabled**: `overlayroot=tmpfs:recurse=0` in cmdline (recurse=0 is essential — without it `/mnt/hdd`
+becomes a RAM overlay and recordings fill memory), `/boot/firmware` mounted ro. Undo: remove `overlayroot=...` from
+`cmdline.txt` on a PC (backups `cmdline.txt.bak.preoverlay`), or `raspi-config nonint disable_overlayfs`+`disable_bootro`.
+`systemd-remount-fs` failing is expected under overlayroot.
+**Known gaps**: no swap is active after the overlay boot (zram and `/mnt/hdd/swapfile` both absent — investigate;
+`rpi-setup-loop@var-swap` fails); Wi-Fi only (Airtel_Zerotouch); no Checkmk server; no weekly off-box backup yet;
+Tailscale node key/state changes are lost on reboot (baseline persists). Never bind-mount `/var/lib/<svc>` from the HDD
+(missing HDD => `Dependency failed` => service, incl. tailscaled, won't start).
+
+### UPDATE 2026-10-18 late — read-only root REMOVED, RAM crash root-caused (supersedes the overlay sections above)
+User decided against the read-only root ("put everything on ssd"). `overlayroot` is gone from `cmdline.txt`
+(backup `cmdline.txt.bak.withoverlay`), `/boot/firmware` is rw again. The Pi is a normal writable SSD install:
+`/` = `sda2` (12G), `/mnt/hdd` = `sda3` (`cctv`, ~99G). Why it had been crashing/freezing: with overlayroot the
+tmpfs upper layer filled to 453 MB (half of 905 MB RAM) because Homebridge (`/opt/homebridge` 281 MB +
+`/var/lib/homebridge` 153 MB) got copied up (chown/writes) on every boot. Homebridge dirs are still bind-mounted
+from `/mnt/hdd/state/{opt-homebridge,var-lib-homebridge}` (harmless; only homebridge depends on the data partition).
+**Netdata is disabled** (`systemctl disable netdata`, it used ~100 MB). Swap: zram (rpi-swap `Mechanism=zram` drop-in in
+`/etc/rpi/swap.conf.d/`) + `/mnt/hdd/swapfile` pri 10. Persistent journald (`/etc/systemd/journald.conf.d/persistent.conf`)
+on `/var/log` -> `/mnt/hdd/varlog`. **Gotcha: files copied from the Windows checkout carry CRLF** — `hdd-watchdog.sh`
+failed with status 203/EXEC and the four systemd override drop-ins were silently ignored; fixed with `sed -i 's/\r$//'`.
+Always strip CRs when installing repo files onto the Pi. Warm reboots work (single USB storage device). A Monitor
+watched RAM/overlay/swap/OOM/failed units from the PC. Still open: Checkmk server, weekly off-box backup, spare clone.
+
+### Weekly backup (2026-10-18) + status wrap-up
+`asterisk-pi/weekly-backup/` — Sundays 03:30 timer on the Pi, newest 4 archives in `/mnt/hdd/backups/weekly/` (first run
+273 MB, checksum verified, 8,624 entries). On-box only: the user **declined a copy to the PC** and **put Checkmk server and the
+SSD clone on hold**. `.gitattributes` forces LF on `*.sh/*.service/*.timer/*.conf` so repo files install cleanly.
+Open: Checkmk server, SSD clone, off-box backup (declined). Tailscale `100.78.206.32`, LAN `192.168.1.28`; the PC-side
+tooling lives in `C:\Users\singh\pi-restore\` (flash/partition scripts, `pi-current.img`, tiny Alpine WSL distro `pitools`).

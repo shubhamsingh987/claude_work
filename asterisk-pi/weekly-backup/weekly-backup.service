@@ -1,0 +1,9 @@
+[Unit]
+Description=Weekly pihole config and state backup
+RequiresMountsFor=/mnt/hdd
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+ExecStart=/usr/local/bin/weekly-backup.sh
