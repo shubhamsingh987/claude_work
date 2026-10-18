@@ -753,3 +753,8 @@ Final sweep: 0 failed units, all services + hdd-watchdog/weekly-backup timers ac
 journal, no CRLF in installed files, NTP synced. **Only open item is hardware**: `vcgencmd get_throttled` stays `0x50005`
 (real under-voltage, repeating; Wi-Fi dongle + NVMe-USB bridge on a Pi 3B). Fix = powered USB hub for the SSD / shorter
 thicker power cable / Ethernet to a router LAN port (the cable was on a Wi-Fi extender with no DHCP; `netplan-eth0` profile exists).
+
+### Power fix confirmed 2026-10-18 23:17
+The under-voltage / random resets were the **charger**, not load: with the non-official charger the 5 V rail dropped even at <5 W.
+After switching to the official Raspberry Pi charger: `vcgencmd get_throttled` = `0x0`, 0 "Undervoltage detected" in dmesg
+after boot, all services up. A powered USB hub is therefore no longer required. Keep using the official PSU.
