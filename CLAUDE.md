@@ -742,3 +742,14 @@ watched RAM/overlay/swap/OOM/failed units from the PC. Still open: Checkmk serve
 SSD clone on hold**. `.gitattributes` forces LF on `*.sh/*.service/*.timer/*.conf` so repo files install cleanly.
 Open: Checkmk server, SSD clone, off-box backup (declined). Tailscale `100.78.206.32`, LAN `192.168.1.28`; the PC-side
 tooling lives in `C:\Users\singh\pi-restore\` (flash/partition scripts, `pi-current.img`, tiny Alpine WSL distro `pitools`).
+
+### Last bug fixed 2026-10-18 (23:05) — Tailscale not starting at boot
+`check-mk-agent.socket` had `After=tailscaled.service`; with `sockets.target` this made a systemd **ordering cycle** and
+systemd silently deleted `tailscaled.service/start` ("Found ordering cycle ... Job tailscaled.service/start deleted"),
+so Tailscale was down after some boots while LAN SSH still worked. Removed the `After=` line (the socket has
+`FreeBind=yes`, no ordering needed); verified: next boot starts tailscaled itself, no cycle. Don't add `After=tailscaled`
+to anything wanted by `sockets.target`. Check boot logs with `journalctl -b | grep -i "ordering cycle"`.
+Final sweep: 0 failed units, all services + hdd-watchdog/weekly-backup timers active, zram + SSD swapfile, persistent
+journal, no CRLF in installed files, NTP synced. **Only open item is hardware**: `vcgencmd get_throttled` stays `0x50005`
+(real under-voltage, repeating; Wi-Fi dongle + NVMe-USB bridge on a Pi 3B). Fix = powered USB hub for the SSD / shorter
+thicker power cable / Ethernet to a router LAN port (the cable was on a Wi-Fi extender with no DHCP; `netplan-eth0` profile exists).
