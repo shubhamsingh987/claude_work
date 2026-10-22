@@ -798,7 +798,8 @@ Asterisk's CLI is not ready for ~1 min after boot (`Unable to connect to remote 
 
 ### Phone menu / IVR (live; source `asterisk-pi/extensions.conf.custom-section.2026-10-22-ivr.txt`)
 One entry point (`from-ata` `s`; `pbx_ata` just jumps to it) and **one main menu reachable from everywhere**:
-- **Call start:** greeting → `check-llm-health.sh` → PC up: assistant (`agi_voicebot.py`); PC off: the agent *asks* "The AI PC
+- **Call start:** greeting → **first menu** (`first_menu`: 1 = ring the phone, 2 or no key within 4 s = the assistant, 9 = main
+  menu) → `check-llm-health.sh` → PC up: assistant (`agi_voicebot.py`); PC off: the agent *asks* "The AI PC
   is off. Press 1, or say yes, to turn it on, or 9 for the menu". 1 = plug on; silence = `agi_pc_voice.py` (Vosk) listens for
   "yes / turn on". After switching on, the caller **stays on the line** (tick sound, poll health every ~8 s, up to ~25 tries) and
   is **connected to the assistant automatically** when the PC answers; 9 leaves for the menu; timeout → menu.
