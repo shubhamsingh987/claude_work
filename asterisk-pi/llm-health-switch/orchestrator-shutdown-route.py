@@ -1,28 +1,24 @@
-# ADD THIS TO THE ORCHESTRATOR (the Flask app on the Windows LLM PC, port 5000).
-# It gives the Pi a way to ask for a *clean* Windows shutdown. Without it, the Pi's
-# shutdown-llm-pc.sh refuses to cut the smart plug (a hard power cut can corrupt files).
-#
-# 1) Create the shared secret ONCE on the Pi (you run this; the value never goes through an agent):
-#      ssh pihole "head -c 24 /dev/urandom | base64 | sudo tee /etc/asterisk/llm_shutdown.token >/dev/null && sudo chmod 600 /etc/asterisk/llm_shutdown.token"
-# 2) Show it on the Pi and paste it into a file on the Windows PC (one line, no quotes):
-#      ssh pihole "sudo cat /etc/asterisk/llm_shutdown.token"
-#      -> save as  C:\voicebot\llm_shutdown.token   (path below; change it if you like)
-# 3) Paste the route below into the orchestrator and restart it.
+# DEPLOYED 2026-10-22 in C:\Users\home\pbx_box\voice_server.py on the LLM PC (just above `if __name__ == "__main__":`).
+# Needs C:\Users\home\pbx_box\llm_shutdown.token = the same secret as /etc/asterisk/llm_shutdown.token on the Pi, readable by
+# SYSTEM (the orchestrator runs as the NSSM service VoiceBotOrchestrator). Uses the file's existing `os`, `subprocess`,
+# `request`, `jsonify` and `log`.
 
-import hmac
-import subprocess
-from flask import request, abort
-
-TOKEN_FILE = r"C:\voicebot\llm_shutdown.token"
-
-
-@app.route("/shutdown", methods=["POST"])           # `app` is the orchestrator's existing Flask app
+@app.route("/shutdown", methods=["POST"])
 def shutdown():
-    with open(TOKEN_FILE) as f:
-        expected = f.read().strip()
+    """Clean Windows shutdown requested by the Pi's phone assistant (shutdown-llm-pc.sh).
+    Needs the shared secret in X-Token; the Pi then waits for this server to stop answering and
+    only afterwards cuts the smart plug."""
+    import hmac
+    token_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "llm_shutdown.token")
+    try:
+        with open(token_file) as f:
+            expected = f.read().strip()
+    except OSError:
+        return jsonify(error="shutdown not configured"), 503
     if not expected or not hmac.compare_digest(request.headers.get("X-Token", ""), expected):
-        abort(403)
-    # 15 s grace, then Windows closes apps and powers off. The Pi waits for this server to stop
-    # answering, gives Windows 40 more seconds, and only then turns the smart plug off.
+        return jsonify(error="forbidden"), 403
+    log.warning("Shutdown requested by the phone assistant; powering off in 15 s")
     subprocess.Popen(["shutdown", "/s", "/t", "15", "/c", "Shutdown requested by the phone assistant"])
-    return "shutting down", 202
+    return jsonify(status="shutting down"), 202
+
+

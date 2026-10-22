@@ -813,12 +813,15 @@ One entry point (`from-ata` `s`; `pbx_ata` just jumps to it) and **one main menu
   question), 5 hang up. Idle/invalid input repeats the menu up to 3 times, then says goodbye.
 - **Voice commands in a live conversation** (`agi_voicebot.py`, matched on the PC's `X-Transcript`): "turn off / shut down the
   pc/computer/llm/server" → "say yes to confirm" → only then `shutdown-llm-pc.sh` (detached); "turn on the pc" → "already on".
-- **Voice shutdown/menu-2 is NOT live until** the `/shutdown` route from `asterisk-pi/llm-health-switch/orchestrator-shutdown-route.py`
-  is added to the Windows orchestrator and the same token is saved there. The Pi side is ready: `/etc/asterisk/llm_shutdown.token`
-  was generated on the Pi 2026-10-22 from random bytes and never displayed (read it with `ssh pihole "sudo cat ..."` to copy it to
-  the PC). `shutdown-ready.sh` (token present AND `GET /shutdown` on the PC is not 404) gates both the voice command and menu 2, so
-  until the route exists it says shutdown "is not set up" instead of pretending, and never cuts power (`shutdown-llm-pc.sh` cuts the plug only after the PC stops
-  answering; a hard cut on a running Windows PC can corrupt files).
+- **Voice shutdown / menu option 2 is LIVE (2026-10-22)** but the actual power-off was **not** exercised (it would shut the
+  user's PC down and cut the plug). Pieces: `POST /shutdown` in the LLM PC's `voice_server.py` (checks `X-Token` against
+  `C:\Users\home\pbx_box\llm_shutdown.token`; no/wrong token = 403, verified), the same token on the Pi in
+  `/etc/asterisk/llm_shutdown.token` (generated on the Pi from random bytes, never displayed; copied to the PC through a pipe
+  and fingerprint-compared), `shutdown-llm-pc.sh` (clean `shutdown /s /t 15`, waits until the server stops answering, +40 s, then
+  plug off; never cuts the plug if the clean shutdown can't be requested) and `shutdown-ready.sh` (token + `GET /shutdown` is
+  not 404) which gates the voice command and menu 2 so the bot never pretends. **`shutdown-ready.sh` must run as root** (token is
+  mode 600; Asterisk is root) — as `kudo` it reports "not ready".
+
 - **Offline speech:** Vosk + `vosk-model-small-en-us-0.15` in `/opt/vosk`. The model wants **16 kHz**, Asterisk records 8 kHz →
   upsampled in the script (Python 3.13 has no `audioop`). Grammar-restricted (yes / turn on / switch on / power on / start /
   wake up). Tested only with clean TTS clips (0.5 s, model load 4 s in the background) — **not yet on a real phone line.**
@@ -830,6 +833,21 @@ One entry point (`from-ata` `s`; `pbx_ata` just jumps to it) and **one main menu
   comment, and a half-comment line makes Asterisk reject the whole file (`There is no existence of 'from-ata' context`). Always
   `dialplan show from-ata` after a reload and roll back from `extensions.conf.bak.*` if it's gone. Build scripts live in
   `pi-restore-tools/` (`build_ivr_dialplan.py`, `patch_*.py`).
+
+### The LLM PC (reachable with `ssh llmpc`) — added 2026-10-22
+`~/.ssh/config` has `Host llmpc` → `100.86.15.30` (Tailscale), user `home`, key `~/.ssh/id_ed25519_llmpc`; the shell there is
+Windows `cmd` (use `powershell -NoProfile -Command ...`, or copy a `.ps1` over with `scp` and run it — quoting through cmd is
+painful). The orchestrator is `C:\Users\home\pbx_box\voice_server.py` (Flask :5000, faster-whisper + Ollama), backup before the
+change `voice_server.py.bak.preshutdown`. Claude Code's classifier blocks remote writes until the user explicitly says so in chat.
+- **Duplicate server bug (fixed):** two launchers started the same server — the NSSM service **`VoiceBotOrchestrator`**
+  (LocalSystem, auto-restarts) and the scheduled task **`VoiceServer`** (logon trigger → `start_server.bat`). Windows lets both bind
+  :5000, so requests hit either copy at random (in-memory per-call chat history can be lost between turns). Kept the service,
+  **disabled** the task (not deleted). NSSM restarts a killed server within seconds — stop the *service*, not the process.
+- **`JellyfinServer` is also an NSSM service** on that PC. A filter on `*nssm*` restarted it by accident during the fix (it came
+  back; mention before touching services there). Fix script: `pi-restore-tools/fix_llm_server.ps1` (its NSSM filter is too broad —
+  filter on the service name `VoiceBotOrchestrator` before reusing).
+- The token file ACL must let `SYSTEM` read it (the service runs as SYSTEM): `icacls ... /grant:r *S-1-5-18:R *S-1-5-32-544:R home:F`.
+  A `home`-only ACL made the service answer 503 "not configured".
 
 ### Tuya plug (replaces the Home Assistant switch for press-1)
 HA is on another network and unreachable from the Pi, so `turn-on-tuya.sh [on|off]` talks to the plug directly:
@@ -865,7 +883,7 @@ Both routes tested (cloud OK; LAN-only OK). The old `turn-on-home-switch.sh` (HA
 
 ### Open items
 1. Static `192.168.1.28` on the Pi's `eth0` (or router fix) so the HT813 reaches Asterisk again — **calls are broken until then**.
-2. Voice shutdown: create `/etc/asterisk/llm_shutdown.token`, add the `/shutdown` route to the Windows orchestrator.
+2. Voice shutdown is wired and refuses bad tokens, but a real end-to-end shutdown (PC off, then plug off) hasn't been run — do it once on purpose.
 3. End-to-end test calls: IVR (9/0 keys), filler + error→menu, PC-off "yes → boots → auto-connect", press 1/3, voice yes on a real line.
 4. Renew the Tuya IoT Core trial when press-1 starts playing three beeps; delete `C:\Users\singh\tuya.secret` / `tuya.local` from the PC.
 5. Old SSD has failing blocks — keep the clone as a spare and look at replacing it.
