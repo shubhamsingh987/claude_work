@@ -93,7 +93,7 @@ exten => s,1,NoOp(Incoming FXO call from ATA)
 
  same => n(pc_off),Read(choice,ivr_off_confirm,1,,1,6)
  same => n,GotoIf($["${choice}"!="1"]?ivr)
- same => n,System(test -r /etc/asterisk/llm_shutdown.token)
+ same => n,System(/usr/local/bin/shutdown-ready.sh)
  same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?do_off)
  same => n,Playback(pc_shutdown_unavailable)
  same => n,Goto(ivr)

@@ -124,6 +124,16 @@ class MiniAGI:
 # ------------------------------------------------------------------
 # Main call flow
 # ------------------------------------------------------------------
+def shutdown_ready() -> bool:
+    """True only if a clean shutdown can really happen (script + token on the Pi, /shutdown route on the PC)."""
+    if not (os.path.exists(SHUTDOWN_SCRIPT) and os.path.exists(SHUTDOWN_TOKEN)):
+        return False
+    try:
+        return requests.get(f"{ORCHESTRATOR_URL}/shutdown", timeout=4).status_code != 404
+    except requests.RequestException:
+        return False
+
+
 def voice_command(transcript: str):
     t = transcript.lower()
     if CMD_OFF.search(t) or CMD_OFF2.search(t):
@@ -268,7 +278,7 @@ def run_call():
             agi.stream_file("pc_already_on")
             continue
         if cmd == "off":
-            if not (os.path.exists(SHUTDOWN_SCRIPT) and os.path.exists(SHUTDOWN_TOKEN)):
+            if not shutdown_ready():
                 log("Voice command: shutdown requested but not set up (script/token missing).")
                 agi.stream_file("pc_shutdown_unavailable")
                 continue

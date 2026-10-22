@@ -813,9 +813,11 @@ One entry point (`from-ata` `s`; `pbx_ata` just jumps to it) and **one main menu
   question), 5 hang up. Idle/invalid input repeats the menu up to 3 times, then says goodbye.
 - **Voice commands in a live conversation** (`agi_voicebot.py`, matched on the PC's `X-Transcript`): "turn off / shut down the
   pc/computer/llm/server" → "say yes to confirm" → only then `shutdown-llm-pc.sh` (detached); "turn on the pc" → "already on".
-- **Voice shutdown/menu-2 is NOT live until** `/etc/asterisk/llm_shutdown.token` exists on the Pi (user creates) and the
-  `/shutdown` route from `asterisk-pi/llm-health-switch/orchestrator-shutdown-route.py` is added to the Windows orchestrator.
-  Until then it says shutdown "is not set up" and never cuts power (`shutdown-llm-pc.sh` cuts the plug only after the PC stops
+- **Voice shutdown/menu-2 is NOT live until** the `/shutdown` route from `asterisk-pi/llm-health-switch/orchestrator-shutdown-route.py`
+  is added to the Windows orchestrator and the same token is saved there. The Pi side is ready: `/etc/asterisk/llm_shutdown.token`
+  was generated on the Pi 2026-10-22 from random bytes and never displayed (read it with `ssh pihole "sudo cat ..."` to copy it to
+  the PC). `shutdown-ready.sh` (token present AND `GET /shutdown` on the PC is not 404) gates both the voice command and menu 2, so
+  until the route exists it says shutdown "is not set up" instead of pretending, and never cuts power (`shutdown-llm-pc.sh` cuts the plug only after the PC stops
   answering; a hard cut on a running Windows PC can corrupt files).
 - **Offline speech:** Vosk + `vosk-model-small-en-us-0.15` in `/opt/vosk`. The model wants **16 kHz**, Asterisk records 8 kHz →
   upsampled in the script (Python 3.13 has no `audioop`). Grammar-restricted (yes / turn on / switch on / power on / start /
