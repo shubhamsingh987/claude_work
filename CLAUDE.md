@@ -35,6 +35,8 @@ reinstall may have reset its low-RAM settings (ML off, 2 s sampling); heat/power
 change without the Pi booting: plug its SanDisk boot pendrive into a PC and rename
 `cmdline.txt.bak.preclaudefix` → `cmdline.txt` on the FAT `bootfs` partition.
 
+> **2026-10-22: the Pi is back online and the Asterisk setup below was restored/extended — see the section "pihole session 2026-10-21/22" at the end of this file for the current state (supersedes the offline notes and TODO list here).**
+
 **Still offline as of 2026-10-07** (Tailscale: "last seen 14d ago"). User will check it in person.
 Note: on this PC, Tailscale can report `unexpected state: NoState` right after boot — wait ~30 s
 and retry before concluding anything about peers.
@@ -273,6 +275,18 @@ by the user 2026-09-29). Tailscale SSH is NOT enabled on it — use plain ssh. R
 socket API needs auth, so check state directly: `v4l2-ctl -d /dev/kvmd-video --query-dv-timings`
 (HDMI signal) and `cat /sys/class/udc/*/state` (`configured` = USB HID seen by PC). On 2026-09-29:
 PiKVM healthy but "Link has been severed" + `not attached` → PC off/unplugged, needs someone there.
+
+### PiKVM power relay + auto-start (2026-10-20)
+`ssh pikvm` now works again (new key `~/.ssh/id_ed25519_pikvm`, `Host pikvm` → `100.93.118.92`, root). A **relay
+module on GPIO23** presses the PC's power switch. Root cause of "pin always on": the relay (active-low) was powered
+from **5 V**, so the Pi's 3.3 V "high" never released it; **powering the relay VCC from 3.3 V fixed it**. Also: kvmd's
+default ATX plugin cannot invert switch pins, so `/etc/kvmd/override.yaml` has `atx: type: disabled` + a User-GPIO
+`power` output (pin 23, `inverted: true`, `initial: false`, pulse 0.5 s). `/boot/config.txt` has `gpio=23=op,dh` (firmware
+holds the pin high from power-up). Auto-start: `pc-autoboot.service` runs `/usr/local/bin/pc-autoboot.sh` before kvmd at
+each PiKVM boot; if the USB gadget state is `not attached` after 20 s (PC off) it pulses the relay 0.5 s; if the PC is on
+it does nothing. Log: `journalctl -t pc-autoboot`. Dry-run flag `/etc/pc-autoboot.dryrun` (removed 2026-10-20 = live).
+Backups on the PiKVM: `override.yaml.bak-preatx`, `.bak-preinvert`, `/boot/config.txt.bak-pregpio23`. The PiKVM also
+dropped off Tailscale / rebooted several times on 2026-10-19/20 (cause unknown; suspect power). Use `rw`/`ro` to write.
 
 ## pi5-ups-lcd-case/ — HAOS Pi 5 (Waveshare touchscreen + UPS HAT)
 
@@ -758,3 +772,84 @@ thicker power cable / Ethernet to a router LAN port (the cable was on a Wi-Fi ex
 The under-voltage / random resets were the **charger**, not load: with the non-official charger the 5 V rail dropped even at <5 W.
 After switching to the official Raspberry Pi charger: `vcgencmd get_throttled` = `0x0`, 0 "Undervoltage detected" in dmesg
 after boot, all services up. A powered USB hub is therefore no longer required. Keep using the official PSU.
+
+## pihole session 2026-10-21/22 — SSD clone, Asterisk restore, Tuya plug, phone-menu voice features
+
+**Read this section first for the current state of the phone line; it supersedes older Asterisk notes above.**
+
+### SSD clone (spare drive)
+Raw-cloned the Pi's SSD (111.8 GB, MBR, boot/root/`cctv`) onto a blank 119 GB drive with
+[`pi-restore-tools/clone-pi-ssd.ps1`](pi-restore-tools/clone-pi-ssd.ps1) (elevated, UAC; `-ResumeGB N` resumes; unreadable
+source sectors are zero-filled and logged). The source had **374 unreadable 4 KB blocks in the last 1.5 MB** (end of the
+`cctv` ext4 partition, likely unused) — consider the old SSD's flash as degrading. The clone's boot files looked correct
+(`PARTUUID=5ad10001-02`, quirk, no overlayroot) yet the Pi never appeared on Tailscale when booted from it; cause not found,
+user went back to the old SSD, so **the clone is just a spare**. Both drives carry disk id `5ad10001`: never attach both to the
+Pi. Script gotchas hit: `Get-Partition` throws on a RAW disk; `[Math]::Min(int,long)` needs casts; check the log with
+ASCII encoding (not `Tee-Object`).
+
+### Asterisk was broken after the Aug-30 image restore — fixed 2026-10-22
+That image predates the 2026-09-14 fix, so `pjsip.conf` had five conflicting `pbx_ata` blocks (`could not be loaded;
+configuration contains a duplicate object`) and every call from the HT813 was dropped (`No matching endpoint found`).
+Restored from this repo: single `pbx_ata` endpoint (qualify 60 s → Avail ~14 ms), `from-ata` dialplan, `astctlgroup=kudo`,
+greeting + `server_offline.gsm`, `check-llm-health.sh`. Needed a full `systemctl stop`/`start` (clean, no orphan this time).
+Backups on the Pi: `/home/kudo/asterisk-etc-backup-20261022-144612`, `*.bak.pretuya/.bak.preopt3/.bak.prefiller/.bak.prevoice`.
+Asterisk's CLI is not ready for ~1 min after boot (`Unable to connect to remote asterisk` early on is normal). Log file is
+`/var/log/asterisk/messages.log`. The CDR/CEL sqlite errors and AEL warnings are stock-config noise.
+
+### Phone menu now (live; source in `asterisk-pi/extensions.conf.custom-section.2026-10-22-switch-confirm.txt`)
+- LLM PC up (`check-llm-health.sh` OK): greeting → `agi_voicebot.py` (its own record beep only — the extra dialplan beep was
+  removed). While the PC thinks the caller hears a spoken filler (`filler_think1-3`), then a soft `filler_tick` loop, and
+  "still working" after 12 s. If the AGI reports `VOICEBOT_OK!=1` (server error/timeout/crash) the caller hears
+  `voicebot_error` ("sorry, an issue occurred, please call again") instead of a silent drop. Hang-ups mid-wait are detected.
+- LLM PC down: `server_offline` announcement inside `Read()` (digits work while it plays): **1** = turn the PC on (plays
+  `activated` / three beeps on failure), **3** = `Dial(PJSIP/pbx_ata,30,r)` rings the phone on the HT813's FXS port (tested,
+  it rang), **2** = hang up, **silence** = `agi_pc_voice.py` listens for "turn on".
+- Spoken commands in a live call (handled in `agi_voicebot.py` from the PC's `X-Transcript`): "turn off / shut down the
+  pc/computer/llm/server" → asks "say yes to confirm" → only then runs `shutdown-llm-pc.sh` detached; "turn on the pc" →
+  "already on". Simulated all flows against a mock server (confirm, cancel, not-set-up, lights false-positive, already-on).
+- **Voice shutdown is NOT live yet**: needs `/etc/asterisk/llm_shutdown.token` on the Pi (user creates) and the `/shutdown`
+  route from [`asterisk-pi/llm-health-switch/orchestrator-shutdown-route.py`](asterisk-pi/llm-health-switch/orchestrator-shutdown-route.py)
+  added to the Windows orchestrator. Until both exist the bot says shutdown "is not set up yet" and never cuts power
+  (`shutdown-llm-pc.sh` only cuts the plug after the PC stops answering; a hard cut on a running Windows PC can corrupt files).
+- Offline speech: Vosk + `vosk-model-small-en-us-0.15` in `/opt/vosk` (96 MB). Model wants **16 kHz**, Asterisk records 8 kHz →
+  upsampled in the script (Python 3.13 has no `audioop`). Grammar-restricted; tested only with clean TTS clips ("turn on" →
+  match, unrelated speech → `[unk]`, 0.5 s, model load 4 s). **Not yet tested on a real phone line.**
+
+### Tuya plug (replaces the Home Assistant switch for press-1)
+HA is on another network and unreachable from the Pi, so `turn-on-tuya.sh [on|off]` talks to the plug directly:
+1. **Tuya cloud API** (creds `/etc/asterisk/tuya.secret`, mode 600). Needs the iot.tuya.com project's **IoT Core trial to be
+   active** — when it lapses the log says `code=28841002 ... subscription has expired`; use *Cloud → Cloud Services → IoT Core →
+   Extend Trial Period* (free form; don't buy anything). HA's Tuya integration is free because it uses Tuya's own login path.
+2. **LAN fallback** via `tinytuya` (`/opt/tinytuya/venv`, creds `/etc/asterisk/tuya.local` = device_id + local_key). The plug is
+   **found by device ID on every run** (UDP discovery, cached in `/var/tmp/tuya-last-ip`) so DHCP/router changes don't matter.
+   Plug sat on the homewifi network (`192.168.0.x`, Tuya v3.3).
+Both credential files were created by the **user** (never an agent — same hard boundary as HA tokens). Logs: `journalctl -t tuya-switch`.
+Both routes tested (cloud OK; LAN-only OK). The old `turn-on-home-switch.sh` (HA) is no longer called.
+
+### Pi networking changed (2026-10-22)
+- `eth0` (cable to the **Airtel** router, `192.168.1.x`, currently `192.168.1.33`) is the primary route; `wlan0` is the **USB Ralink
+  dongle** (`mt7601u`; the Pi 3B's onboard Wi-Fi isn't loaded — not investigated) and now joins **homewifi** (`192.168.0.248`).
+  Old Airtel_Zerotouch Wi-Fi profile deleted (netplan file kept as `*.yaml.disabled`; backup `/home/kudo/netplan-wlan0.bak.yaml`).
+- **The HT813 sends its SIP to `192.168.1.28`** (the old Wi-Fi address). Router leases are *infinite*; the user moved the DHCP
+  binding to the Ethernet MAC `b8:27:eb:ca:80:40` but the router still hands out `.33` even to a fresh DHCP request. Proposed
+  fallback (NOT applied, awaiting "yes"): a static `192.168.1.28` on `eth0` (arping showed `.28` free). **Until `.28` is on the
+  Pi, incoming calls from the HT813 reach nothing.** Router client list still shows the stale old-Wi-Fi entry (harmless).
+- With `eth0` on `192.168.1.x` and `wlan0` on `192.168.0.x` there is no subnet clash. The LLM PC `192.168.1.31:5000` is reachable
+  over `eth0` (HTTP 404 at `/` = server up).
+- Don't plug a cable in without checking: an `eth0` default route with a better metric hijacks replies to the HT813.
+
+### Misc findings
+- Pi power check: `vcgencmd get_throttled` was `0x0` on the official charger; one `0x50000` after hot-plugging a fan on the 3.3 V
+  pin (cleared by reboot). The user's fan stops boot when fed from 5 V (inrush); 3.3 V works. GPIO fan overlay / GPIO22 ideas
+  were tried and reverted — `config.txt` is back to its original. Fan switching by transistor was explained, not built.
+- `ssh pihole` over the hostname needs `~/.ssh/known_hosts` to have `pihole.tail5cad5d.ts.net` (fingerprint matched the IP's).
+- `weekly-backup` was triggered manually on 2026-10-22 after these changes (it excludes `/opt/vosk` and `/opt/tinytuya`, which
+  are re-creatable; the archive is mode 644 and contains the Tuya secret files — on-box only).
+- PowerShell 5.1 here: no `Test-Connection -TimeoutSeconds`, `Get-ChildItem -Filter` takes one string.
+
+### Open items
+1. Static `192.168.1.28` on the Pi's `eth0` (or router fix) so the HT813 reaches Asterisk again — **calls are broken until then**.
+2. Voice shutdown: create `/etc/asterisk/llm_shutdown.token`, add the `/shutdown` route to the Windows orchestrator.
+3. End-to-end test calls: filler + error message, press 1/3, the offline "say turn on" on a real line.
+4. Renew the Tuya IoT Core trial when press-1 starts playing three beeps; delete `C:\Users\singh\tuya.secret` / `tuya.local` from the PC.
+5. Old SSD has failing blocks — keep the clone as a spare and look at replacing it.

@@ -1,0 +1,76 @@
+; 2026-10-22: no dialplan beep before the bot (the AGI plays its own record beep); if the AGI reports
+; VOICEBOT_OK!=1 the caller hears 'sorry, an issue occurred, please call again'.
+; 2026-10-22: no key pressed (timeout) = listen for 'turn on' with offline Vosk speech recognition (agi_pc_voice.py).
+; 2026-10-22: press 3 = ring the telephone on the ATA's FXS port (Dial PJSIP/pbx_ata, 30 s).
+; 2026-10-22: after pressing 1 the caller now hears 'activated' (script exit 0) or three beeps (failed)
+; instead of an instant hangup. Based on the capture of 2026-09-22 from kudo@pihole (/etc/asterisk/extensions.conf) after adding the
+; LLM-health gate + home-switch fallback. See SETUP.md section 7 for the full explanation.
+; [from-ht813] is unchanged (dead context -- no live endpoint uses it anymore since the
+; 2026-09-14 fix, kept only for reference). [from-ata] is the live one.
+;
+; Live verification after applying (dialplan reload):
+;   asterisk -rx "dialplan show from-ata"  ->  2 extensions (26 priorities) in 1 context
+
+[from-ht813]
+exten => s,1,NoOp(Incoming call from HT813 - routing to voicebot)
+ same => n,Answer()
+same => n,Playback(gangsta_greeting)
+same => n,Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+exten => pbx_ata,1,NoOp(Incoming call from HT813 via pbx_ata - routing to voicebot)
+ same => n,Answer()
+same => n,Playback(gangsta_greeting)
+same => n,Playback(beep)
+ same => n,AGI(agi_voicebot.py)
+ same => n,Hangup()
+
+[from-ata]
+exten => s,1,NoOp(Incoming FXO call from ATA - routing to voicebot)
+ same => n,Answer()
+ same => n,Playback(gangsta_greeting)
+ same => n,System(/usr/local/bin/check-llm-health.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?llm_up:llm_down)
+ same => n(llm_up),AGI(agi_voicebot.py)
+ same => n,GotoIf($["${VOICEBOT_OK}"="1"]?bot_done:bot_err)
+ same => n(bot_done),Hangup()
+ same => n(bot_err),Playback(voicebot_error)
+ same => n,Hangup()
+ same => n(llm_down),Read(choice,server_offline,1,,1,7)
+ same => n,GotoIf($["${choice}"="1"]?switch_on:check3)
+ same => n(switch_on),System(/usr/local/bin/turn-on-tuya.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?sw_ok:sw_fail)
+ same => n(sw_ok),Playback(activated)
+ same => n,Hangup()
+ same => n(sw_fail),Playback(beep&beep&beep)
+ same => n(hangup_now),Hangup()
+ same => n(check3),GotoIf($["${choice}"="3"]?ring_phone:check_voice)
+ same => n(ring_phone),Dial(PJSIP/pbx_ata,30,r)
+ same => n,Hangup()
+ same => n(check_voice),GotoIf($["${choice}"=""]?voice_on:hangup_now)
+ same => n(voice_on),AGI(agi_pc_voice.py)
+ same => n,Hangup()
+exten => pbx_ata,1,NoOp(Incoming FXO call via pbx_ata - routing to voicebot)
+ same => n,Answer()
+ same => n,Playback(gangsta_greeting)
+ same => n,System(/usr/local/bin/check-llm-health.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?llm_up:llm_down)
+ same => n(llm_up),AGI(agi_voicebot.py)
+ same => n,GotoIf($["${VOICEBOT_OK}"="1"]?bot_done:bot_err)
+ same => n(bot_done),Hangup()
+ same => n(bot_err),Playback(voicebot_error)
+ same => n,Hangup()
+ same => n(llm_down),Read(choice,server_offline,1,,1,7)
+ same => n,GotoIf($["${choice}"="1"]?switch_on:check3)
+ same => n(switch_on),System(/usr/local/bin/turn-on-tuya.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?sw_ok:sw_fail)
+ same => n(sw_ok),Playback(activated)
+ same => n,Hangup()
+ same => n(sw_fail),Playback(beep&beep&beep)
+ same => n(hangup_now),Hangup()
+ same => n(check3),GotoIf($["${choice}"="3"]?ring_phone:check_voice)
+ same => n(ring_phone),Dial(PJSIP/pbx_ata,30,r)
+ same => n,Hangup()
+ same => n(check_voice),GotoIf($["${choice}"=""]?voice_on:hangup_now)
+ same => n(voice_on),AGI(agi_pc_voice.py)
+ same => n,Hangup()
