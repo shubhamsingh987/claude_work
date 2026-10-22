@@ -864,13 +864,26 @@ Both routes tested (cloud OK; LAN-only OK). The old `turn-on-home-switch.sh` (HA
 - `eth0` (cable to the **Airtel** router, `192.168.1.x`, currently `192.168.1.33`) is the primary route; `wlan0` is the **USB Ralink
   dongle** (`mt7601u`; the Pi 3B's onboard Wi-Fi isn't loaded — not investigated) and now joins **homewifi** (`192.168.0.248`).
   Old Airtel_Zerotouch Wi-Fi profile deleted (netplan file kept as `*.yaml.disabled`; backup `/home/kudo/netplan-wlan0.bak.yaml`).
-- **The HT813 sends its SIP to `192.168.1.28`** (the old Wi-Fi address). Router leases are *infinite*; the user moved the DHCP
-  binding to the Ethernet MAC `b8:27:eb:ca:80:40` but the router still hands out `.33` even to a fresh DHCP request. Proposed
-  fallback (NOT applied, awaiting "yes"): a static `192.168.1.28` on `eth0` (arping showed `.28` free). **Until `.28` is on the
-  Pi, incoming calls from the HT813 reach nothing.** Router client list still shows the stale old-Wi-Fi entry (harmless).
+- **The HT813 sends its SIP to `192.168.1.28`** (the old Wi-Fi address). Router leases are *infinite*, so after the move the router
+  kept handing the Ethernet port `.33` even to a fresh DHCP request (a stored-lease wipe on the Pi changed nothing). **Resolved
+  2026-10-22 ~16:30 by fixing the binding in the router: `eth0` now has `192.168.1.28`** (MAC `b8:27:eb:ca:80:40`) and real calls
+  reach Asterisk again (CDR + AGI log confirmed a real call at 16:38 IST). If calls stop arriving, check `ip -4 -br addr show eth0`
+  first. The router's client list still showed the old Wi-Fi entry for a while (harmless).
 - With `eth0` on `192.168.1.x` and `wlan0` on `192.168.0.x` there is no subnet clash. The LLM PC `192.168.1.31:5000` is reachable
   over `eth0` (HTTP 404 at `/` = server up).
 - Don't plug a cable in without checking: an `eth0` default route with a better metric hijacks replies to the HT813.
+
+### HT813 does not report the caller hanging up (found 2026-10-22) — OPEN
+Symptom: after the caller hangs up, the home phone keeps ringing (`Dial` runs its full 30 s) and Asterisk keeps the call alive in
+the menu. Evidence: CDR shows `Dial ... NO ANSWER` followed by another ~46 s of menu on a call the caller had already ended — no SIP
+`BYE` ever arrived. Cause: the HT813's FXO port isn't detecting the line's disconnect signal, and Asterisk-side settings can't fix
+it (`rtp_timeout` is 0, and the HT813 keeps sending RTP anyway). Fix is on the HT813 web page `http://192.168.1.24` (admin password
+is the user's; I never logged in): FXO port **Disconnect Tone** (must match the Indian line's disconnect/busy tone — the default is
+probably another country's), **Enable Current Disconnect**, and/or **Enable Polarity Reversal**, whichever the line really signals.
+Offer on the table: record one test call (`MixMonitor`, temporary, deleted afterwards) and measure the tone's frequency/cadence
+to give the exact Disconnect Tone string. Not done — needs the user's OK and a test call.
+- **CDR gotcha:** `/var/log/asterisk/cdr-csv/Master.csv` timestamps are **UTC** (IST = UTC+5:30); `messages.log`, the AGI log
+  (`/tmp/agi_voicebot.log`, `/tmp/agi_pc_voice.log`) and `journalctl` are local IST.
 
 ### Misc findings
 - Pi power check: `vcgencmd get_throttled` was `0x0` on the official charger; one `0x50000` after hot-plugging a fan on the 3.3 V
@@ -882,8 +895,11 @@ Both routes tested (cloud OK; LAN-only OK). The old `turn-on-home-switch.sh` (HA
 - PowerShell 5.1 here: no `Test-Connection -TimeoutSeconds`, `Get-ChildItem -Filter` takes one string.
 
 ### Open items
-1. Static `192.168.1.28` on the Pi's `eth0` (or router fix) so the HT813 reaches Asterisk again — **calls are broken until then**.
-2. Voice shutdown is wired and refuses bad tokens, but a real end-to-end shutdown (PC off, then plug off) hasn't been run — do it once on purpose.
-3. End-to-end test calls: IVR (9/0 keys), filler + error→menu, PC-off "yes → boots → auto-connect", press 1/3, voice yes on a real line.
-4. Renew the Tuya IoT Core trial when press-1 starts playing three beeps; delete `C:\Users\singh\tuya.secret` / `tuya.local` from the PC.
-5. Old SSD has failing blocks — keep the clone as a spare and look at replacing it.
+1. HT813 hang-up detection (above) — the phone keeps ringing after the caller hangs up; needs the HT813 Disconnect Tone/current/
+   polarity setting (user's admin login) or a recorded test call to measure the tone.
+2. Real end-to-end test of voice shutdown (PC off, then plug off) — wired and refusing bad tokens, never actually fired.
+3. End-to-end test calls of the full IVR on a real line: first menu (1 ring phone / 2 assistant / 9 menu), 9/0 keys, filler +
+   error→menu, PC-off "yes → boots → auto-connect", press 1/3, offline voice "yes" (Vosk has only seen clean TTS clips).
+4. Renew the Tuya IoT Core trial when press-1 starts playing three beeps (`journalctl -t tuya-switch`); delete
+   `C:\Users\singh\tuya.secret` / `tuya.local` from the PC (the user does this; Claude doesn't hard-delete files).
+5. The old SSD has failing blocks — the clone drive is a spare; plan a replacement.
