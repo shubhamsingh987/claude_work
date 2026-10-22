@@ -796,24 +796,37 @@ Backups on the Pi: `/home/kudo/asterisk-etc-backup-20261022-144612`, `*.bak.pret
 Asterisk's CLI is not ready for ~1 min after boot (`Unable to connect to remote asterisk` early on is normal). Log file is
 `/var/log/asterisk/messages.log`. The CDR/CEL sqlite errors and AEL warnings are stock-config noise.
 
-### Phone menu now (live; source in `asterisk-pi/extensions.conf.custom-section.2026-10-22-switch-confirm.txt`)
-- LLM PC up (`check-llm-health.sh` OK): greeting → `agi_voicebot.py` (its own record beep only — the extra dialplan beep was
-  removed). While the PC thinks the caller hears a spoken filler (`filler_think1-3`), then a soft `filler_tick` loop, and
-  "still working" after 12 s. If the AGI reports `VOICEBOT_OK!=1` (server error/timeout/crash) the caller hears
-  `voicebot_error` ("sorry, an issue occurred, please call again") instead of a silent drop. Hang-ups mid-wait are detected.
-- LLM PC down: `server_offline` announcement inside `Read()` (digits work while it plays): **1** = turn the PC on (plays
-  `activated` / three beeps on failure), **3** = `Dial(PJSIP/pbx_ata,30,r)` rings the phone on the HT813's FXS port (tested,
-  it rang), **2** = hang up, **silence** = `agi_pc_voice.py` listens for "turn on".
-- Spoken commands in a live call (handled in `agi_voicebot.py` from the PC's `X-Transcript`): "turn off / shut down the
-  pc/computer/llm/server" → asks "say yes to confirm" → only then runs `shutdown-llm-pc.sh` detached; "turn on the pc" →
-  "already on". Simulated all flows against a mock server (confirm, cancel, not-set-up, lights false-positive, already-on).
-- **Voice shutdown is NOT live yet**: needs `/etc/asterisk/llm_shutdown.token` on the Pi (user creates) and the `/shutdown`
-  route from [`asterisk-pi/llm-health-switch/orchestrator-shutdown-route.py`](asterisk-pi/llm-health-switch/orchestrator-shutdown-route.py)
-  added to the Windows orchestrator. Until both exist the bot says shutdown "is not set up yet" and never cuts power
-  (`shutdown-llm-pc.sh` only cuts the plug after the PC stops answering; a hard cut on a running Windows PC can corrupt files).
-- Offline speech: Vosk + `vosk-model-small-en-us-0.15` in `/opt/vosk` (96 MB). Model wants **16 kHz**, Asterisk records 8 kHz →
-  upsampled in the script (Python 3.13 has no `audioop`). Grammar-restricted; tested only with clean TTS clips ("turn on" →
-  match, unrelated speech → `[unk]`, 0.5 s, model load 4 s). **Not yet tested on a real phone line.**
+### Phone menu / IVR (live; source `asterisk-pi/extensions.conf.custom-section.2026-10-22-ivr.txt`)
+One entry point (`from-ata` `s`; `pbx_ata` just jumps to it) and **one main menu reachable from everywhere**:
+- **Call start:** greeting → `check-llm-health.sh` → PC up: assistant (`agi_voicebot.py`); PC off: the agent *asks* "The AI PC
+  is off. Press 1, or say yes, to turn it on, or 9 for the menu". 1 = plug on; silence = `agi_pc_voice.py` (Vosk) listens for
+  "yes / turn on". After switching on, the caller **stays on the line** (tick sound, poll health every ~8 s, up to ~25 tries) and
+  is **connected to the assistant automatically** when the PC answers; 9 leaves for the menu; timeout → menu.
+- **With the assistant:** `bot_hint` ("press 9 any time for the menu, 0 to cancel a question"). While the PC thinks: first
+  question gets `filler_stay` ("stay on the line… 0 cancel, 9 menu"), later ones a short filler, then soft ticks, "still working"
+  after 12 s. **9** (during recording, thinking or the reply) = main menu; **0** while thinking = cancel that question and
+  listen again (the PC's late answer is ignored). **Any failure** (Ollama/server crash, HTTP error, timeout, script bug) →
+  `voicebot_error` ("sorry, an issue occurred") **then the main menu — never a silent hang-up**. Caller hang-ups are detected.
+- **Main menu (`ivr_menu`):** 1 PC on, 2 PC off (asks "press 1 to confirm"; needs the shutdown token, else says not set up),
+  3 ring the phone (`Dial(PJSIP/pbx_ata,30,r)` — tested, it rang), 4 talk to the assistant (if the PC is off → the turn-on
+  question), 5 hang up. Idle/invalid input repeats the menu up to 3 times, then says goodbye.
+- **Voice commands in a live conversation** (`agi_voicebot.py`, matched on the PC's `X-Transcript`): "turn off / shut down the
+  pc/computer/llm/server" → "say yes to confirm" → only then `shutdown-llm-pc.sh` (detached); "turn on the pc" → "already on".
+- **Voice shutdown/menu-2 is NOT live until** `/etc/asterisk/llm_shutdown.token` exists on the Pi (user creates) and the
+  `/shutdown` route from `asterisk-pi/llm-health-switch/orchestrator-shutdown-route.py` is added to the Windows orchestrator.
+  Until then it says shutdown "is not set up" and never cuts power (`shutdown-llm-pc.sh` cuts the plug only after the PC stops
+  answering; a hard cut on a running Windows PC can corrupt files).
+- **Offline speech:** Vosk + `vosk-model-small-en-us-0.15` in `/opt/vosk`. The model wants **16 kHz**, Asterisk records 8 kHz →
+  upsampled in the script (Python 3.13 has no `audioop`). Grammar-restricted (yes / turn on / switch on / power on / start /
+  wake up). Tested only with clean TTS clips (0.5 s, model load 4 s in the background) — **not yet on a real phone line.**
+- **Tested:** every AGI path against a mock server/fake AGI (9/0 at each phase, errors, cancel, shutdown confirm/cancel/not-set-up,
+  voice on/other/9). **The dialplan flow itself (Read/Goto labels, the wait loop, menu) has only been load-checked, not run
+  end-to-end on a real call.**
+- **Deploy gotchas (cost an outage of calls for ~2 min on 2026-10-22):** when splicing a custom block into `extensions.conf`,
+  find the `[from-ht813]` header with an *anchored* match (`^\[from-ht813\]$`) — the first plain mention of the name is inside a
+  comment, and a half-comment line makes Asterisk reject the whole file (`There is no existence of 'from-ata' context`). Always
+  `dialplan show from-ata` after a reload and roll back from `extensions.conf.bak.*` if it's gone. Build scripts live in
+  `pi-restore-tools/` (`build_ivr_dialplan.py`, `patch_*.py`).
 
 ### Tuya plug (replaces the Home Assistant switch for press-1)
 HA is on another network and unreachable from the Pi, so `turn-on-tuya.sh [on|off]` talks to the plug directly:
@@ -850,6 +863,6 @@ Both routes tested (cloud OK; LAN-only OK). The old `turn-on-home-switch.sh` (HA
 ### Open items
 1. Static `192.168.1.28` on the Pi's `eth0` (or router fix) so the HT813 reaches Asterisk again — **calls are broken until then**.
 2. Voice shutdown: create `/etc/asterisk/llm_shutdown.token`, add the `/shutdown` route to the Windows orchestrator.
-3. End-to-end test calls: filler + error message, press 1/3, the offline "say turn on" on a real line.
+3. End-to-end test calls: IVR (9/0 keys), filler + error→menu, PC-off "yes → boots → auto-connect", press 1/3, voice yes on a real line.
 4. Renew the Tuya IoT Core trial when press-1 starts playing three beeps; delete `C:\Users\singh\tuya.secret` / `tuya.local` from the PC.
 5. Old SSD has failing blocks — keep the clone as a spare and look at replacing it.

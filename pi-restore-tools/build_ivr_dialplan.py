@@ -1,0 +1,101 @@
+import re
+R = r'C:\Users\singh\claude_work\asterisk-pi'
+old = open(R + r'\extensions.conf.custom-section.2026-10-22-switch-confirm.txt', newline='').read().replace('\r\n', '\n')
+ht813 = old[old.index("\n[from-ht813]\n") + 1:old.index("\n[from-ata]\n") + 1]   # dead legacy context, kept as is
+# (anchored on a header line: the first plain mention of the name is inside a comment)
+
+header = '''; 2026-10-22 IVR restructure (live on pihole). One entry point, one main menu reachable from everywhere.
+;   call start -> greeting -> LLM PC up?  yes: assistant (agi_voicebot.py)   no: "PC is off, turn it on?"
+;   while talking to the assistant: 9 = main menu, 0 = cancel the running question
+;   any assistant failure (Ollama/server crash, timeout) = apology + main menu, never a silent hang-up
+;   PC off: press 1 / say yes -> plug on -> caller stays on the line while it boots -> auto-connect
+;   main menu: 1 PC on, 2 PC off (confirm), 3 ring the phone, 4 assistant, 5 hang up
+; The [from-ht813] context is a dead legacy leftover (no endpoint uses it).
+
+'''
+
+ata = '''[from-ata]
+exten => s,1,NoOp(Incoming FXO call from ATA)
+ same => n,Answer()
+ same => n,Playback(gangsta_greeting)
+ same => n,Set(IVRTRIES=0)
+ same => n,System(/usr/local/bin/check-llm-health.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?llm_up:llm_down)
+
+ same => n(llm_up),Set(VOICEBOT_NEXT=)
+ same => n,Set(VOICEBOT_OK=0)
+ same => n,AGI(agi_voicebot.py)
+ same => n,GotoIf($["${VOICEBOT_NEXT}"="ivr"]?ivr)
+ same => n,GotoIf($["${VOICEBOT_OK}"="1"]?bot_done)
+ same => n,Playback(voicebot_error)
+ same => n,Goto(ivr)
+ same => n(bot_done),Hangup()
+
+ same => n(llm_down),Read(choice,pc_off_ask,1,,1,8)
+ same => n,GotoIf($["${choice}"="1"]?pc_on)
+ same => n,GotoIf($["${choice}"="9"]?ivr)
+ same => n,GotoIf($["${choice}"=""]?pc_voice:ivr)
+ same => n(pc_voice),Set(PCVOICE=none)
+ same => n,AGI(agi_pc_voice.py)
+ same => n,GotoIf($["${PCVOICE}"="ok"]?pc_wait)
+ same => n,GotoIf($["${PCVOICE}"="fail"]?pc_failed)
+ same => n,GotoIf($["${PCVOICE}"="none"]?pc_nohear)
+ same => n,Goto(ivr)
+ same => n(pc_nohear),Playback(pc_voice_fail)
+ same => n,Goto(ivr)
+
+ same => n(pc_on),System(/usr/local/bin/turn-on-tuya.sh on)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?pc_wait:pc_failed)
+ same => n(pc_failed),Playback(pc_fail)
+ same => n,Goto(ivr)
+ same => n(pc_wait),Set(WAITN=0)
+ same => n,Read(choice,pc_starting,1,,1,1)
+ same => n,GotoIf($["${choice}"="9"]?ivr)
+ same => n(pc_poll),System(/usr/local/bin/check-llm-health.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?pc_ready)
+ same => n,Set(WAITN=$[${WAITN}+1])
+ same => n,GotoIf($[${WAITN}>25]?pc_slow)
+ same => n,Read(choice,filler_tick,1,,1,4)
+ same => n,GotoIf($["${choice}"="9"]?ivr)
+ same => n,Goto(pc_poll)
+ same => n(pc_ready),Playback(pc_up_connecting)
+ same => n,Goto(llm_up)
+ same => n(pc_slow),Playback(pc_timeout)
+ same => n,Goto(ivr)
+
+ same => n(ivr),Set(IVRTRIES=$[${IVRTRIES}+1])
+ same => n,GotoIf($[${IVRTRIES}>3]?ivr_bye)
+ same => n,Read(choice,ivr_menu,1,,1,8)
+ same => n,GotoIf($["${choice}"="1"]?pc_on)
+ same => n,GotoIf($["${choice}"="2"]?pc_off)
+ same => n,GotoIf($["${choice}"="3"]?ring_phone)
+ same => n,GotoIf($["${choice}"="4"]?assistant)
+ same => n,GotoIf($["${choice}"="5"]?ivr_bye)
+ same => n,Goto(ivr)
+ same => n(ivr_bye),Playback(ivr_goodbye)
+ same => n,Hangup()
+
+ same => n(assistant),Set(IVRTRIES=0)
+ same => n,System(/usr/local/bin/check-llm-health.sh)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?llm_up)
+ same => n,Playback(ivr_assistant_off)
+ same => n,Goto(llm_down)
+
+ same => n(pc_off),Read(choice,ivr_off_confirm,1,,1,6)
+ same => n,GotoIf($["${choice}"!="1"]?ivr)
+ same => n,System(test -r /etc/asterisk/llm_shutdown.token)
+ same => n,GotoIf($["${SYSTEMSTATUS}"="SUCCESS"]?do_off)
+ same => n,Playback(pc_shutdown_unavailable)
+ same => n,Goto(ivr)
+ same => n(do_off),System(setsid /usr/local/bin/shutdown-llm-pc.sh >/dev/null 2>&1 &)
+ same => n,Playback(pc_shutdown_ack)
+ same => n,Hangup()
+
+ same => n(ring_phone),Dial(PJSIP/pbx_ata,30,r)
+ same => n,Goto(ivr)
+
+exten => pbx_ata,1,Goto(s,1)
+'''
+out = header + ht813 + ata
+open(R + r'\extensions.conf.custom-section.2026-10-22-ivr.txt', 'w', newline='\n').write(out)
+print(len(out.splitlines()), "lines written")

@@ -104,6 +104,15 @@ class MiniAGI:
         self._send(f'SET VARIABLE {name} "{value}"')
 
     @staticmethod
+    def digit_of(result: str) -> str:
+        """The key the caller pressed, from 'result=NN' (ASCII code), or ''."""
+        import re as _re
+        m = _re.search(r"result=(\d+)", result)
+        if m and int(m.group(1)) in (35, 42) or (m and 48 <= int(m.group(1)) <= 57):
+            return chr(int(m.group(1)))
+        return ""
+
+    @staticmethod
     def caller_gone(result: str) -> bool:
         # STREAM FILE / RECORD FILE report a hung-up caller as result=-1 or (hangup)
         return "result=-1" in result or "(hangup)" in result
@@ -142,23 +151,27 @@ def post_turn(wav_path, call_id, box):
         box["done"].set()
 
 
-def wait_with_filler(agi, done):
-    """Play a short spoken filler, then a soft tick, until the reply arrives.
-    Returns False if the caller hung up while waiting."""
+def wait_with_filler(agi, done, first):
+    """Spoken filler, then a soft tick, until the reply arrives. Caller keys: 9 = menu, 0 = cancel.
+    Returns 'done', 'gone' (hung up), 'ivr' or 'cancel'."""
     start = time.time()
     still_said = False
-    r = agi.stream_file(random.choice(FILLER_PHRASES))
-    if agi.caller_gone(r):
-        return False
-    while not done.is_set():
+    r = agi.stream_file("filler_stay" if first else random.choice(FILLER_PHRASES), "09")
+    while True:
+        if agi.caller_gone(r):
+            return "gone"
+        d = agi.digit_of(r)
+        if d == "9":
+            return "ivr"
+        if d == "0":
+            return "cancel"
+        if done.is_set():
+            return "done"
         if not still_said and time.time() - start > FILLER_STILL_AFTER:
             still_said = True
-            r = agi.stream_file("filler_still")
+            r = agi.stream_file("filler_still", "09")
         else:
-            r = agi.stream_file("filler_tick")
-        if agi.caller_gone(r):
-            return False
-    return True
+            r = agi.stream_file("filler_tick", "09")
 
 
 def run_call():
@@ -168,15 +181,30 @@ def run_call():
     log(f"Voicebot starting for call_id={call_id}")
     agi.verbose(f"Voicebot starting for call_id={call_id}")
 
+    asked = 0             # questions sent so far (the first gets the longer "stay on the line" filler)
+    r = agi.stream_file("bot_hint", "9")
+    if agi.caller_gone(r):
+        return True
+    if agi.digit_of(r) == "9":
+        agi.set_variable("VOICEBOT_NEXT", "ivr")
+        return True
     pending_off = False   # True while waiting for the caller's yes/no to a shutdown request
     for turn in range(MAX_TURNS):
         record_basename = os.path.join(RECORD_DIR, f"rec_{call_id}_{turn}")
-        r = agi.record_file(record_basename, fmt="wav", escape_digits="#",
+        r = agi.record_file(record_basename, fmt="wav", escape_digits="09#",
                             timeout_ms=MAX_RECORD_SECS * 1000,
                             silence_secs=SILENCE_TIMEOUT, beep=True)
         if agi.caller_gone(r):
             log("Caller hung up during recording.")
             return True
+        d = agi.digit_of(r)
+        if d == "9":
+            log("Caller pressed 9 -> menu.")
+            agi.set_variable("VOICEBOT_NEXT", "ivr")
+            return True
+        if d == "0":
+            log("Caller pressed 0 while recording -> listening again.")
+            continue
         wav_path = record_basename + ".wav"
 
         if not os.path.exists(wav_path) or os.path.getsize(wav_path) < 100:
@@ -187,9 +215,18 @@ def run_call():
         box = {"done": threading.Event()}
         worker = threading.Thread(target=post_turn, args=(wav_path, call_id, box), daemon=True)
         worker.start()
-        if not wait_with_filler(agi, box["done"]):
+        state = wait_with_filler(agi, box["done"], asked == 0)
+        asked += 1
+        if state == "gone":
             log("Caller hung up while waiting for the LLM.")
             return True
+        if state == "ivr":
+            log("Caller pressed 9 while waiting -> menu.")
+            agi.set_variable("VOICEBOT_NEXT", "ivr")
+            return True
+        if state == "cancel":
+            log("Caller pressed 0 -> query cancelled, listening again.")
+            continue                      # the worker's late answer is simply ignored
         worker.join()
 
         if "error" in box:
@@ -243,10 +280,15 @@ def run_call():
         reply_path = os.path.join(RECORD_DIR, f"reply_{call_id}_{turn}.wav")
         with open(reply_path, "wb") as f:
             f.write(resp.content)
-        r = agi.stream_file(reply_path.replace(".wav", ""))
+        r = agi.stream_file(reply_path.replace(".wav", ""), "09")
         os.remove(reply_path)
         if agi.caller_gone(r):
             log("Caller hung up during the reply.")
+            return True
+        d = agi.digit_of(r)
+        if d == "9":
+            log("Caller pressed 9 during the reply -> menu.")
+            agi.set_variable("VOICEBOT_NEXT", "ivr")
             return True
 
         if any(word in transcript.lower() for word in GOODBYE_WORDS):
