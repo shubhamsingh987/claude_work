@@ -50,7 +50,13 @@ history.forEach(m => bubble(m.role === 'user' ? 'user' : 'assistant', m.content)
 
 fetch(new URL('v1/models', location.href), { cache: 'no-store' })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-  .then(j => { model = j.data[0].id; modelEl.textContent = model; })
+  .then(j => {
+    const sel = document.createElement('select');
+    sel.style.cssText = 'font:inherit;font-size:12px;background:var(--card);color:var(--muted);border:0;border-radius:8px;padding:2px 4px;max-width:45vw';
+    j.data.forEach(m => sel.add(new Option(m.id, m.id)));
+    model = sel.value; sel.onchange = () => { model = sel.value; };
+    modelEl.replaceChildren(sel);
+  })
   .catch(err => bubble('assistant', 'Could not load models from ' + new URL('v1/models', location.href) + ' — ' + err.message, 'err'));
 
 document.getElementById('clear').onclick = () => { history = []; save(); chat.innerHTML = ''; };
