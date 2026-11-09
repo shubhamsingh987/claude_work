@@ -12,6 +12,13 @@ Full map of every service running on `pihole` (URLs via both Tailscale and LAN) 
 below — it gave up restarting permanently after 5 failures in 10s, rather than actually keeping
 the service down "on purpose".
 
+## pc-remote-shutdown/ — shut this Windows PC down over SSH (2026-11-09)
+
+Other sessions can power this PC (`Shubham`, Tailscale `100.121.120.45`) off with `ssh shubham-pc shutdown`
+(60 s delay; also `restart`, `cancel`, `status`). Key `~/.ssh/id_ed25519_shutdown_shubham` is locked to a
+forced command — it can't open a shell. OpenSSH Server, password auth off, firewall Tailscale + LAN only.
+Details/undo: [`pc-remote-shutdown/README.md`](pc-remote-shutdown/README.md). Never send `shutdown` to test it — use `status`.
+
 ## asterisk-pi/
 
 Config, backups, and setup notes for the Asterisk PBX running on the home Raspberry Pi (hostname
