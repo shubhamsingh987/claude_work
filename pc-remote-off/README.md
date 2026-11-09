@@ -24,10 +24,20 @@ Tailscale must be connected on the phone (it is "On demand" by default).
 |---|---|
 | `off` | shutdown in 60 s |
 | `restart` | restart in 60 s |
-| `cancel` | abort a pending shutdown/restart |
+| `cancel` | abort a pending shutdown/restart (says "Nothing to cancel" if none) |
 | `status` | prints the PC name if it's on |
 
-Anything else is refused. Undo: delete the key's line in `C:\ProgramData\ssh\administrators_authorized_keys`,
+Anything else is refused (only the first word counts, so stray spaces/newlines from the Shortcut are fine).
+The command text is never re-parsed by `cmd`, so `&`, `|` or quotes in it can't run anything else. Undo: delete the key's line in `C:\ProgramData\ssh\administrators_authorized_keys`,
 `Remove-NetFirewallRule -Name sshd-tailscale-only`, and optionally
 `Remove-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0`.
 Assumes the Windows user is an administrator (keys then live in `administrators_authorized_keys`).
+
+## Status
+**Not yet tested on a real PC or iPhone** (written 2026-11-09). First run: PC Status → PC Off → PC Cancel within 60 s.
+
+## Troubleshooting
+- Shortcut times out: Tailscale off on the phone or the PC, or `sshd` not running (`Get-Service sshd`).
+- "Permission denied (publickey)": the key line didn't land in `C:\ProgramData\ssh\administrators_authorized_keys`,
+  or that file's ACL was changed (only Administrators + SYSTEM may have access, or sshd ignores it). Re-run the setup script.
+- Server log: Event Viewer → Applications and Services Logs → OpenSSH → Operational.

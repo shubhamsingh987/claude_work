@@ -288,6 +288,13 @@ it does nothing. Log: `journalctl -t pc-autoboot`. Dry-run flag `/etc/pc-autoboo
 Backups on the PiKVM: `override.yaml.bak-preatx`, `.bak-preinvert`, `/boot/config.txt.bak-pregpio23`. The PiKVM also
 dropped off Tailscale / rebooted several times on 2026-10-19/20 (cause unknown; suspect power). Use `rw`/`ro` to write.
 
+## pc-remote-off/ — turn the Windows PC off from the iPhone (2026-11-09, untested)
+An iOS Shortcut ("Run Script Over SSH") SSHes over Tailscale into the PC's OpenSSH Server with a key that may only run
+`pc-power.cmd` (`off`/`restart`/`cancel`/`status`; 60 s delay). Firewall rule allows port 22 from `100.64.0.0/10` only.
+The user runs `setup-windows.ps1 -PubKey ...` elevated on the PC — the key is generated on the iPhone, not by an agent.
+Security fix 2026-11-09: the first version used `%SSH_ORIGINAL_COMMAND%`, which let `"&cmd&"` escape the forced command;
+it now uses delayed expansion. Keep it that way. See [`pc-remote-off/README.md`](pc-remote-off/README.md).
+
 ## pi5-ups-lcd-case/ — HAOS Pi 5 (Waveshare touchscreen + UPS HAT)
 
 A **different** Raspberry Pi from `pihole` above: runs Home Assistant OS, hostname
