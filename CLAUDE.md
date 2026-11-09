@@ -19,12 +19,6 @@ Other sessions can power this PC (`Shubham`, Tailscale `100.121.120.45`) off wit
 forced command — it can't open a shell. OpenSSH Server, password auth off, firewall Tailscale + LAN only.
 Details/undo: [`pc-remote-shutdown/README.md`](pc-remote-shutdown/README.md). Never send `shutdown` to test it — use `status`.
 
-## meshcentral/ — web console for the Windows PCs (2026-11-09)
-
-MeshCentral 1.3.1 runs as service `meshcentral.exe` on this PC: https://shubham-1.tail5cad5d.ts.net:8443
-(Tailscale + LAN only). The user creates the admin account themselves; afterwards run `lock-signups.ps1`
-(elevated) to disable sign-ups. Agents are installed from the web UI. See [`meshcentral/README.md`](meshcentral/README.md).
-
 ## asterisk-pi/
 
 Config, backups, and setup notes for the Asterisk PBX running on the home Raspberry Pi (hostname
