@@ -1,5 +1,5 @@
 # Run on the Windows PC in an ELEVATED PowerShell:
-#   powershell -ExecutionPolicy Bypass -File setup-windows.ps1 -PubKey "ssh-ed25519 AAAA... pi-pc-off"
+#   powershell -ExecutionPolicy Bypass -File setup-windows.ps1 -PubKey "ssh-ed25519 AAAA... (iPhone Shortcuts key)"
 # Installs OpenSSH Server, allows it only from Tailscale (100.64.0.0/10), and authorises ONE key
 # that can only run pc-power.cmd (off / restart / cancel / status). No shell access.
 param([Parameter(Mandatory)][string]$PubKey)
